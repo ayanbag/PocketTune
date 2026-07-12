@@ -1,0 +1,46 @@
+# Models — never commit weights
+*.gguf
+models/
+!models/.gitkeep
+
+# Vendored upstream source (cloned by scripts)
+vendor/
+
+# Native build outputs
+build/
+build-*/
+bin/
+*.so
+*.a
+*.o
+
+# Node / React Native
+node_modules/
+.expo/
+*.log
+npm-debug.log*
+yarn-error.log*
+.metro-health-check*
+
+# Android
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/android/local.properties
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.uv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
