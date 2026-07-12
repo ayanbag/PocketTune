@@ -167,7 +167,7 @@ export function LineChart({
 }) {
   const [width, setWidth] = useState(0);
   const padL = 34;
-  const padR = 14;
+  const padR = 18;
   const padT = 12;
   const padB = 22;
   const all = series.flatMap(s => s.values).filter((v): v is number => v != null);
@@ -178,6 +178,26 @@ export function LineChart({
     padL + (xLabels.length > 1 ? (i / (xLabels.length - 1)) * plotW : plotW / 2);
   const yAt = (v: number) => padT + plotH - (v / max) * plotH;
   const ticks = [0, max / 2, max];
+
+  // Direct-label endpoints only where they don't collide (per the mark spec:
+  // when end labels converge, the legend + axis carry the rest).
+  const endLabelYs: number[] = [];
+  const labelable = new Set<string>();
+  [...series]
+    .map(sr => {
+      let last: number | null = null;
+      for (const v of sr.values) if (v != null) last = v;
+      return { name: sr.name, last };
+    })
+    .filter((e): e is { name: string; last: number } => e.last != null)
+    .sort((a, b) => b.last - a.last)
+    .forEach(e => {
+      const y = yAt(e.last);
+      if (endLabelYs.every(other => Math.abs(other - y) >= 16)) {
+        endLabelYs.push(y);
+        labelable.add(e.name);
+      }
+    });
 
   return (
     <View onLayout={e => setWidth(e.nativeEvent.layout.width)}>
@@ -247,9 +267,9 @@ export function LineChart({
                     />
                   ) : null,
                 )}
-                {lastVal != null && (
+                {lastVal != null && labelable.has(sr.name) && (
                   <SvgText
-                    x={xAt(lastIdx)}
+                    x={xAt(lastIdx) - 8}
                     y={yAt(lastVal) - 9}
                     fill={theme.inkPrimary}
                     fontSize={11}
