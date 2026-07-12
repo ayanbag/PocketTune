@@ -2,7 +2,7 @@
 
 ## What this project is
 
-**PocketTune**: an Android app that finds and applies the fastest local-LLM configuration for the specific phone it runs on, built for the **Arm Create: AI Optimization Challenge 2026** (Mobile AI track, deadline **Aug 14, 2026, 4 PM PDT**). Full plan, architecture, optimization levers, and milestones live in [PLAN.md](PLAN.md) — **read it before doing anything**.
+**PocketTune**: an Android app that finds and applies the fastest local-LLM configuration for the specific phone it runs on, built for the **Arm Create: AI Optimization Challenge 2026** (Mobile AI track, deadline **July 20, 2026, 4 PM PDT**). Full plan, architecture, optimization levers, and milestones live in [PLAN.md](PLAN.md) — **read it before doing anything**.
 
 One-line pitch: detect the phone's Arm CPU features (dotprod/i8mm/SVE2) → sweep quantization × KleidiAI kernels × threads on-device → recommend + apply the best config → give the user a working offline chat app, with a reproducible benchmark harness.
 

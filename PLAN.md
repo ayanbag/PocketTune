@@ -1,7 +1,24 @@
 # PocketTune — Arm Create: AI Optimization Challenge 2026
 
 > Device-aware on-device LLM optimizer for Android. Mobile AI track entry.
-> Deadline: **August 14, 2026, 4:00 PM PDT** · [Challenge page](https://arm-ai-optimization-challenge.devpost.com/)
+> **Deadline: July 20, 2026 (set by Ayan — earlier than Devpost's Aug 14).** · [Challenge page](https://arm-ai-optimization-challenge.devpost.com/)
+
+## ⚠️ Compressed schedule — 7 days left as of 2026-07-13
+
+The 9-week plan below is superseded. Remaining work, in priority order:
+
+| Day | Work |
+|---|---|
+| **1 (Jul 13)** | **llama.rn audit** — does it ship arch flags? Decides the whole app story. Then scaffold RN app. |
+| **2–4** | Minimal app: chat + CPU detect + apply-best-config. **Skip the in-app sweep UI** — `harness/bench.py` already does sweeps and is the reusable artifact. |
+| **5** | Quantization sweep (models downloaded) + error-bar reruns so the KleidiAI claim is defensible. |
+| **6** | README with one-command reproduction, results write-up, site polish. |
+| **7 (Jul 19)** | Demo video (<3 min) + Devpost submission. Buffer. |
+
+**Cut if time runs short** (in this order): big.LITTLE speculative decoding → energy-per-token → LiteRT comparison → in-app sweep UI. **Never cut**: reproducible harness, raw results in repo, working README, the 4.94× finding.
+
+---
+*Original plan below (schedule superseded, substance still valid).*
 
 ## Context
 

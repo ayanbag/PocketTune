@@ -3,228 +3,278 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PocketTune — your phone is 5× faster than your AI thinks</title>
+<title>PocketTune — Your phone is 5× faster than your AI thinks.</title>
 <meta name="description" content="PocketTune finds the fastest local-LLM configuration for your exact Arm chip — measured on real hardware, not assumed. Arm Create: AI Optimization Challenge 2026, Mobile AI Track.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23D9541E'/><text y='.82em' font-size='58' x='22' fill='%23FFFFFF'>⏚</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231d1d1f'/><text y='.8em' font-size='56' x='24' fill='%23ffffff'>⏚</text></svg>">
 <style>
-  /* ───────── design tokens — PocketTune “thermal copper” system ───────── */
+  /* ─────────── PocketTune · Apple design system ─────────── */
   :root {
-    --ground: #F4F6F7;
-    --surface: #FFFFFF;
-    --surface-2: #EAEEF0;
-    --ink: #161F28;
-    --ink-2: #5B6B79;
-    --ink-3: #8595A2;
-    --line: #D7DEE2;
-    --accent: #D9541E;
-    --accent-ink: #FFFFFF;
-    --accent-soft: #FBEAE1;
-    --good: #2C9865;
-    --good-soft: #E2F2E9;
-    --bad: #A33B3B;
-    --bad-soft: #F5E4E4;
-    --c1: #2A78D6;   /* chart: generic   (validated) */
-    --c2: #EB6834;   /* chart: arch      (validated) */
-    --c3: #EDA100;   /* chart: kleidiai  (validated, label relief) */
-    --term-bg: #131B23; --term-ink: #C9D6DF;
-    --mono: "Cascadia Code", "SF Mono", "JetBrains Mono", Consolas, ui-monospace, monospace;
-    --sans: "Segoe UI Variable Text", "Segoe UI", "Avenir Next", system-ui, -apple-system, sans-serif;
-    --disp: "Segoe UI Variable Display", "Segoe UI", "Avenir Next", system-ui, -apple-system, sans-serif;
+    --bg:            #ffffff;
+    --bg-alt:        #f5f5f7;   /* Apple's signature grey band */
+    --card:          #ffffff;
+    --ink:           #1d1d1f;   /* Apple text */
+    --ink-2:         #6e6e73;
+    --ink-3:         #86868b;
+    --hair:          #d2d2d7;
+    --blue:          #0071e3;   /* Apple button blue */
+    --blue-hover:    #0077ed;
+    --link:          #0066cc;   /* Apple link blue */
+    --green:         #1d8a4e;
+    --nav-bg:        rgba(251, 251, 253, 0.72);
+    /* chart series — validated on both surfaces */
+    --c1: #2A78D6;  --c2: #EB6834;  --c3: #EDA100;
+    --code-bg:       #f5f5f7;
+    --radius-lg:     28px;
+    --radius-md:     18px;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ground: #10171E; --surface: #19232C; --surface-2: #202C37;
-      --ink: #E8EDF0; --ink-2: #8FA0AD; --ink-3: #647482; --line: #2B3843;
-      --accent: #FF7B47; --accent-ink: #1A1108; --accent-soft: #33221A;
-      --good: #4CC38A; --good-soft: #16352A; --bad: #E08585; --bad-soft: #3A2224;
+      --bg:      #000000;
+      --bg-alt:  #1d1d1f;
+      --card:    #1d1d1f;
+      --ink:     #f5f5f7;
+      --ink-2:   #a1a1a6;
+      --ink-3:   #86868b;
+      --hair:    #424245;
+      --blue:    #0071e3;
+      --blue-hover: #0077ed;
+      --link:    #2997ff;
+      --green:   #4CC38A;
+      --nav-bg:  rgba(22, 22, 23, 0.72);
       --c1: #3987E5; --c2: #D95926; --c3: #C98500;
-      --term-bg: #0B1117; --term-ink: #B7C6D1;
+      --code-bg: #2a2a2c;
     }
   }
 
   *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; background: var(--ground); font-family: var(--sans); color: var(--ink); line-height: 1.6; font-size: 16px; }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--text); font-size: 17px; line-height: 1.47;
+    letter-spacing: -0.01em;
+  }
   img { max-width: 100%; }
-  html { scroll-behavior: smooth; }
 
-  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
-
-  /* full-bleed bands with an inner content column */
+  /* full-bleed bands, Apple's narrow content column */
   .band { width: 100%; }
-  .band.alt { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .band.dark { background: var(--ink); color: var(--ground); }
-  .col { max-width: 1160px; margin: 0 auto; padding: 84px clamp(20px, 5vw, 64px); display: flex; flex-direction: column; gap: 24px; }
+  .band.grey { background: var(--bg-alt); }
+  .col { max-width: 980px; margin: 0 auto; padding: 100px 22px; }
 
-  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
-  h1 { font-family: var(--disp); font-weight: 800; letter-spacing: -0.028em; font-size: clamp(44px, 7.6vw, 84px); line-height: 0.99; margin: 0; text-wrap: balance; }
-  h1 em { font-style: normal; color: var(--accent); }
-  h2 { font-family: var(--disp); font-weight: 750; letter-spacing: -0.018em; font-size: clamp(26px, 3.4vw, 36px); line-height: 1.15; margin: 0; text-wrap: balance; }
-  h3 { font-size: 17px; font-weight: 650; margin: 0; }
-  p { margin: 0; max-width: 64ch; }
-  .muted { color: var(--ink-2); }
-  strong { font-weight: 650; }
-  code { font-family: var(--mono); font-size: .86em; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; }
-  .sechead { display: flex; flex-direction: column; gap: 6px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; }
+  h1 {
+    font-size: clamp(42px, 6.4vw, 76px); line-height: 1.05;
+    letter-spacing: -0.015em; text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08;
+    letter-spacing: -0.012em; text-wrap: balance;
+  }
+  h3 { font-size: 21px; line-height: 1.19; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  .lead { font-size: clamp(19px, 2vw, 24px); line-height: 1.35; color: var(--ink-2); letter-spacing: -0.008em; }
+  .body-2 { font-size: 17px; color: var(--ink-2); }
+  .small { font-size: 14px; color: var(--ink-3); line-height: 1.4; }
+  strong { font-weight: 600; }
+  code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 2px 7px; border-radius: 6px; letter-spacing: 0; }
+  .center { text-align: center; }
+  .center p, .center .lead { margin-left: auto; margin-right: auto; }
+  .lead.narrow { max-width: 34ch; }
 
-  /* reveal */
-  .reveal { opacity: 0; transform: translateY(20px); }
-  .in { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .eyebrow { font-family: var(--display); font-size: 21px; font-weight: 600; color: var(--blue); letter-spacing: -0.01em; }
+  .kicker { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* buttons + chevron links — Apple */
+  .btn {
+    display: inline-block; background: var(--blue); color: #fff;
+    font-size: 17px; font-weight: 400; letter-spacing: -0.01em;
+    padding: 12px 23px; border-radius: 980px; text-decoration: none;
+    transition: background .2s ease, transform .2s ease;
+  }
+  .btn:hover { background: var(--blue-hover); transform: scale(1.02); }
+  .btn.ghost { background: transparent; color: var(--link); border: 1px solid var(--link); }
+  .btn.ghost:hover { background: color-mix(in srgb, var(--link) 8%, transparent); }
+  .chev { color: var(--link); text-decoration: none; font-size: 19px; letter-spacing: -0.01em; }
+  .chev::after { content: " ›"; }
+  .chev:hover { text-decoration: underline; }
+  .actions { display: flex; gap: 26px; flex-wrap: wrap; align-items: center; }
+  .center .actions { justify-content: center; }
+  a:focus-visible, summary:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; border-radius: 6px; }
+
+  /* nav — Apple's thin translucent bar */
+  nav {
+    position: sticky; top: 0; z-index: 30; height: 48px;
+    background: var(--nav-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid color-mix(in srgb, var(--hair) 60%, transparent);
+  }
+  .nav-inner { max-width: 1024px; margin: 0 auto; height: 100%; padding: 0 22px; display: flex; align-items: center; gap: 28px; }
+  .brand { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  .brand .mk { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 12px; }
+  nav .links { margin-left: auto; display: flex; gap: 26px; align-items: center; }
+  nav .links a { font-size: 12px; color: var(--ink); text-decoration: none; opacity: .85; }
+  nav .links a:hover { opacity: 1; color: var(--link); }
+  @media (max-width: 640px) { nav .links a.hide-sm { display: none; } }
+
+  /* fade-up on scroll — Apple's signature */
+  .fade { opacity: 0; transform: translateY(30px); }
+  .fade.in { opacity: 1; transform: none; transition: opacity .9s cubic-bezier(.28,.11,.32,1), transform .9s cubic-bezier(.28,.11,.32,1); }
   @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; }
-    .in { transition: none; }
-    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .fade { opacity: 1; transform: none; }
+    .fade.in { transition: none; }
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 
-  /* nav */
-  nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--ground) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-  .nav-inner { max-width: 1160px; margin: 0 auto; padding: 14px clamp(20px, 5vw, 64px); display: flex; align-items: center; gap: 24px; }
-  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--disp); font-weight: 800; font-size: 18px; color: var(--ink); text-decoration: none; }
-  .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 15px; }
-  nav .links { margin-left: auto; display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
-  nav .links > a { font-size: 14px; color: var(--ink-2); text-decoration: none; }
-  nav .links > a:hover { color: var(--accent); }
-  .btn { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; font-size: 14.5px; padding: 10px 22px; border-radius: 999px; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; }
-  .btn.solid { background: var(--accent); color: var(--accent-ink); }
-  .btn.outline { border: 1.5px solid var(--line); color: var(--ink); background: var(--surface); }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -14px rgba(217,84,30,.55); }
-  .btn.big { font-size: 16px; padding: 13px 28px; }
-
   /* hero */
-  .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
-  #matmul { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: .5;
-    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 94%);
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 94%); }
-  .hero .col { position: relative; z-index: 1; padding-top: 96px; padding-bottom: 72px; gap: 26px; }
-  .lede { font-size: 19px; color: var(--ink-2); max-width: 56ch; }
-  .lede b { color: var(--accent); font-weight: 650; }
-  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-  .cta-note { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
-  .hero-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
-  .hstat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 15px 22px; min-width: 165px; }
-  .hstat .t { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--good); font-weight: 700; }
-  .hstat .v { font-family: var(--disp); font-weight: 800; font-size: 36px; letter-spacing: -0.02em; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .hstat .v small { font-size: 17px; }
-  .hstat .l { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+  .hero .col { padding-top: 84px; padding-bottom: 0; display: flex; flex-direction: column; gap: 18px; align-items: center; text-align: center; }
+  .hero-canvas-wrap { position: relative; width: 100%; margin-top: 46px; height: 260px; overflow: hidden; }
+  #matmul { position: absolute; inset: 0; width: 100%; height: 100%;
+    -webkit-mask-image: radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,.95), transparent 76%);
+    mask-image: radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,.95), transparent 76%); }
 
-  /* panels & chart */
-  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: clamp(22px, 3vw, 32px); display: flex; flex-direction: column; gap: 18px; }
-  .band.alt .panel { background: var(--ground); }
-  .measured { display: inline-flex; align-items: center; gap: 8px; background: var(--good-soft); color: var(--good); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; width: fit-content; }
-  .measured::before { content: "✓"; }
-  .chart { display: flex; flex-direction: column; gap: 16px; }
-  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-2); }
-  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 4px; margin-right: 7px; }
-  .cgroup { display: flex; flex-direction: column; gap: 8px; }
-  .cgroup-title { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
-  .crow { display: grid; grid-template-columns: 92px 1fr; gap: 14px; align-items: center; }
-  .crow .rname { font-size: 13.5px; color: var(--ink-2); text-align: right; }
-  .barwrap { position: relative; height: 30px; }
-  .databar { position: absolute; left: 0; top: 4px; height: 22px; border-radius: 0 6px 6px 0; width: 0; transition: width 1.1s cubic-bezier(.2,.7,.2,1); cursor: default; }
-  .databar .val { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  /* big stat row */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 40px 20px; width: 100%; }
+  .stat { text-align: center; }
+  .stat .v { font-family: var(--display); font-weight: 600; font-size: clamp(44px, 5.6vw, 64px); line-height: 1.05; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: .5em; font-weight: 600; }
+  .stat .l { font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.33; }
+  .stat .t { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+
+  /* cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--card); border-radius: var(--radius-lg); padding: 34px 30px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: transform .35s cubic-bezier(.28,.11,.32,1), box-shadow .35s ease;
+  }
+  .band.grey .card { background: var(--bg); }
+  .card:hover { transform: translateY(-6px); box-shadow: 0 22px 50px -26px rgba(0,0,0,.28); }
+  .card .num { font-family: var(--display); font-weight: 600; font-size: 56px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .card .num small { font-size: .45em; }
+  .card p { font-size: 15px; color: var(--ink-2); line-height: 1.5; }
+
+  /* chart panel */
+  .panel { background: var(--card); border-radius: var(--radius-lg); padding: clamp(26px, 4vw, 44px); display: flex; flex-direction: column; gap: 22px; }
+  .band.grey .panel { background: var(--bg); }
+  .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--green); }
+  .badge::before { content: "✓"; }
+  .chart { display: flex; flex-direction: column; gap: 20px; }
+  .legend { display: flex; gap: 22px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+  .cgroup { display: flex; flex-direction: column; gap: 9px; }
+  .cgroup-title { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+  .crow { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; }
+  .crow .rname { font-size: 14px; color: var(--ink-2); text-align: right; }
+  .barwrap { position: relative; height: 26px; }
+  .databar { position: absolute; left: 0; top: 3px; height: 20px; border-radius: 5px; width: 0; transition: width 1.2s cubic-bezier(.28,.11,.32,1); cursor: default; }
+  .databar .val { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
   .databar:hover { filter: brightness(1.08); }
-  .databar .tip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); font-size: 12px; font-family: var(--mono); padding: 5px 12px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 2; }
+  .databar .tip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-size: 12px; font-family: var(--mono); padding: 6px 12px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 2; }
   .databar:hover .tip { opacity: 1; }
-  details.tableview summary { cursor: pointer; color: var(--ink-2); font-family: var(--mono); font-size: 12.5px; }
-  details.tableview table { border-collapse: collapse; margin-top: 12px; font-size: 14px; }
-  details.tableview th, details.tableview td { text-align: left; padding: 9px 18px 9px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
-  details.tableview th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
-  details.tableview tr:last-child td { border-bottom: none; }
-
-  /* findings */
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px; display: flex; flex-direction: column; gap: 10px; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
-  .band.alt .card { background: var(--ground); }
-  .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 14px 32px -18px rgba(217,84,30,.5); }
-  .card .k { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-  .card .num { font-family: var(--disp); font-weight: 800; font-size: 48px; letter-spacing: -0.03em; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
-  .card .num small { font-size: 22px; }
-  .card p { font-size: 14px; color: var(--ink-2); }
+  details summary { cursor: pointer; font-size: 15px; color: var(--link); list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: " ›"; }
+  details[open] summary::after { content: " ⌄"; }
+  details table { border-collapse: collapse; margin-top: 16px; font-size: 15px; width: 100%; }
+  details th, details td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--hair); font-variant-numeric: tabular-nums; }
+  details th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); font-weight: 600; }
+  details tr:last-child td { border-bottom: none; }
 
   /* steps */
-  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 18px; display: flex; flex-direction: column; gap: 8px; transition: transform .2s ease, border-color .2s ease; }
-  .step:hover { transform: translateY(-4px); border-color: var(--accent); }
-  .step .k { font-family: var(--mono); font-size: 11.5px; color: var(--accent); letter-spacing: .1em; font-weight: 600; }
-  .step p { font-size: 13.5px; color: var(--ink-2); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 34px 24px; }
+  .step { display: flex; flex-direction: column; gap: 8px; }
+  .step .n { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--blue); }
+  .step p { font-size: 15px; color: var(--ink-2); line-height: 1.5; }
 
   /* sweep */
-  .sweep { display: grid; grid-template-columns: 96px repeat(6, 1fr); gap: 6px; align-items: center; }
-  .sweep .rlab, .sweep .clab { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+  .sweep { display: grid; grid-template-columns: 92px repeat(6, 1fr); gap: 6px; align-items: center; }
+  .sweep .rlab, .sweep .clab { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
   .sweep .clab { text-align: center; }
-  .cell { aspect-ratio: 1.7; border-radius: 6px; background: var(--surface-2); position: relative; transition: background .25s ease, box-shadow .25s ease; }
-  .cell.scan { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-  .cell.done { background: var(--accent-soft); }
-  .cell.best { background: var(--accent); box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent); }
-  .cell.best::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent-ink); font-weight: 700; font-size: 14px; }
-  .sweep-status { font-family: var(--mono); font-size: 13px; color: var(--ink-2); min-height: 1.5em; }
-  .sweep-status b { color: var(--accent); font-weight: 600; }
+  .cell { aspect-ratio: 1.7; border-radius: 5px; background: var(--bg-alt); position: relative; transition: background .3s ease, box-shadow .3s ease; }
+  .band.grey .cell { background: var(--code-bg); }
+  .cell.scan { background: var(--blue); }
+  .cell.done { background: color-mix(in srgb, var(--blue) 22%, transparent); }
+  .cell.best { background: var(--blue); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--blue); }
+  .cell.best::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 13px; }
+  .sweep-status { font-size: 14px; color: var(--ink-2); min-height: 1.5em; }
+  .sweep-status b { color: var(--ink); font-weight: 600; }
 
   /* terminal */
-  .term { background: var(--term-bg); border-radius: 16px; padding: 24px 26px; font-family: var(--mono); font-size: 13.5px; line-height: 1.8; color: var(--term-ink); overflow-x: auto; box-shadow: 0 24px 60px -32px rgba(0,0,0,.5); }
-  .term .dots { display: flex; gap: 7px; margin-bottom: 14px; }
-  .term .dots span { width: 11px; height: 11px; border-radius: 50%; background: #3A4854; }
-  .term .dots span:first-child { background: var(--accent); }
-  .term .g { color: #63C58F; }
-  .term .o { color: #FF9A6B; }
-  .term .d { color: #6E8090; }
+  .term { background: #1d1d1f; border-radius: var(--radius-md); padding: 26px 28px; font-family: var(--mono); font-size: 13.5px; line-height: 1.85; color: #d2d2d7; overflow-x: auto; letter-spacing: 0; }
+  .term .dots { display: flex; gap: 8px; margin-bottom: 16px; }
+  .term .dots span { width: 12px; height: 12px; border-radius: 50%; background: #3a3a3c; }
+  .term .g { color: #5fd49a; }
+  .term .o { color: #ff9f6b; }
+  .term .d { color: #86868b; }
 
-  /* CTA band */
-  .band.dark .col { gap: 18px; padding-top: 64px; padding-bottom: 64px; }
-  .band.dark h2 { color: var(--ground); }
-  .band.dark p { color: color-mix(in srgb, var(--ground) 72%, transparent); }
-  .band.dark .cta-note { color: color-mix(in srgb, var(--ground) 55%, transparent); }
+  .stack { display: flex; flex-direction: column; gap: 22px; }
+  .stack.lg { gap: 34px; }
 
-  footer { border-top: 1px solid var(--line); }
-  footer .col { padding-top: 32px; padding-bottom: 44px; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
-  footer .row { display: flex; gap: 18px; flex-wrap: wrap; }
+  footer { background: var(--bg-alt); border-top: 1px solid var(--hair); }
+  footer .col { padding: 34px 22px; display: flex; flex-direction: column; gap: 10px; }
+  footer .row { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer a { color: var(--link); text-decoration: none; font-size: 12px; }
+  footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="nav-inner">
-    <a class="logo" href="index.html"><span class="mark">⏚</span>PocketTune</a>
+    <a class="brand" href="index.html"><span class="mk">⏚</span>PocketTune</a>
     <div class="links">
       <a href="#evidence">Evidence</a>
-      <a href="#findings">Findings</a>
-      <a href="#how">How it works</a>
-      <a href="learn.html">Inside PocketTune</a>
-      <a class="btn outline" href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub ↗</a>
-      <a class="btn solid" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download APK</a>
+      <a href="#findings" class="hide-sm">Findings</a>
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="learn.html">Inside</a>
+      <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
+      <a href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download</a>
     </div>
   </div>
 </nav>
 
 <header class="band hero">
-  <canvas id="matmul" aria-hidden="true"></canvas>
   <div class="col">
-    <div class="eyebrow">Arm Create : AI Optimization Challenge 2026 · Mobile AI Track</div>
-    <h1>Your phone is <em>5× faster</em><br>than your AI thinks.</h1>
-    <p class="lede">PocketTune finds the fastest local-LLM configuration for <b>your exact Arm chip</b> — by measuring on the device, not trusting folklore. Then it applies the winner and hands you a fully offline chat app.</p>
-    <div class="cta-row">
-      <a class="btn solid big" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">⇩ Download the app</a>
-      <a class="btn outline big" href="https://github.com/ayandgp/pockettune" title="placeholder link">View on GitHub ↗</a>
-      <span class="cta-note">Android · arm64 · free &amp; open source (MIT)</span>
+    <div class="eyebrow fade">PocketTune</div>
+    <h1 class="fade">Your phone is 5× faster<br>than your AI thinks.</h1>
+    <p class="lead fade narrow">It finds the fastest local-LLM setup for your exact Arm chip. Then it proves it.</p>
+    <div class="actions fade">
+      <a class="btn" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download the app</a>
+      <a class="chev" href="#evidence">See the evidence</a>
     </div>
-    <div class="hero-stats">
-      <div class="hstat"><div class="t">Measured</div><div class="v"><span data-count="4.94" data-dec="2">0</span><small>×</small></div><div class="l">prompt processing — same phone &amp; model</div></div>
-      <div class="hstat"><div class="t">Measured</div><div class="v"><span data-count="1.34" data-dec="2">0</span><small>×</small></div><div class="l">generation speed — same session</div></div>
-      <div class="hstat"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
-      <div class="hstat"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls — inference never leaves the phone</div></div>
+    <p class="small fade">Android · arm64 · free and open source · Arm Create : AI Optimization Challenge 2026 · Mobile AI Track</p>
+    <div class="hero-canvas-wrap fade">
+      <canvas id="matmul" aria-hidden="true"></canvas>
     </div>
   </div>
 </header>
 
-<section id="evidence" class="band alt">
-  <div class="col reveal">
-    <div class="sechead">
-      <div class="eyebrow">The evidence</div>
-      <h2>One phone. One model. Three builds.</h2>
+<section class="band grey">
+  <div class="col">
+    <div class="stats">
+      <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="4.94" data-dec="2">0</span><small>×</small></div><div class="l">faster at reading your prompt</div></div>
+      <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="1.34" data-dec="2">0</span><small>×</small></div><div class="l">faster at writing the answer</div></div>
+      <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
+      <div class="stat fade"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls. Nothing leaves the phone.</div></div>
     </div>
-    <span class="measured">Measured on-device · 12 Jul 2026</span>
-    <p class="muted">Llama 3.2 1B (Q4_0) on a Nothing Phone 2a — MediaTek Dimensity 7200 Pro, an Armv9 chip with <code>i8mm</code> matrix instructions. Same phone, same model, same session; 5 repetitions per config with 2-minute cooldowns. Raw JSON ships in the repo's <code>results/</code> folder.</p>
-    <div class="panel">
+  </div>
+</section>
+
+<section id="evidence" class="band">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">The evidence</div>
+      <h2>One phone. One model.<br>Three builds.</h2>
+      <p class="lead">Same device, same session — only the build changes.</p>
+    </div>
+    <div class="panel fade">
+      <div>
+        <span class="badge">Measured on-device · 12 July 2026</span>
+        <p class="body-2" style="margin-top:8px">Llama 3.2 1B (Q4_0) on a Nothing Phone 2a — MediaTek Dimensity 7200 Pro, an Armv9 chip with <code>i8mm</code> matrix instructions. Five repetitions per configuration, two-minute cooldowns between builds. Raw JSON ships in the repo.</p>
+      </div>
       <div class="chart" id="ladder">
         <div class="legend">
           <span><span class="swatch" style="background: var(--c1)"></span>generic build — no Arm feature flags</span>
@@ -233,20 +283,20 @@
         </div>
         <div class="cgroup">
           <div class="cgroup-title">Prefill — reading your prompt (pp128)</div>
-          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="19.5"><span class="val">20.5 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 20.51 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="96.6"><span class="val">101.4 · 4.94×</span><span class="tip">-march=armv8.2a+i8mm+dotprod · 6 threads · 101.43 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">+ kleidiai</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="95.3"><span class="val">100.1 · +0%</span><span class="tip">arch flags + GGML_CPU_KLEIDIAI=ON · 6 threads · 100.09 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="16.5"><span class="val">20.5 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 20.51 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="81.8"><span class="val">101.4 · 4.94×</span><span class="tip">-march=armv8.2a+i8mm+dotprod · 6 threads · 101.43 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">+ KleidiAI</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="80.7"><span class="val">100.1 · +0%</span><span class="tip">arch flags + GGML_CPU_KLEIDIAI=ON · 6 threads · 100.09 tok/s</span></div></div></div>
         </div>
         <div class="cgroup">
           <div class="cgroup-title">Decode — writing the answer (tg64)</div>
-          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="12.1"><span class="val">12.7 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 12.73 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="16.2"><span class="val">17.0 · 1.34×</span><span class="tip">-march flags · 2 threads · 17.00 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">+ kleidiai</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="14.9"><span class="val">15.6 · ≈0%</span><span class="tip">arch flags + KleidiAI · 2 threads · 15.61 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="10.3"><span class="val">12.7 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 12.73 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="13.7"><span class="val">17.0 · 1.34×</span><span class="tip">-march flags · 2 threads · 17.00 tok/s</span></div></div></div>
+          <div class="crow"><span class="rname">+ KleidiAI</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="12.6"><span class="val">15.6 · ≈0%</span><span class="tip">arch flags + KleidiAI · 2 threads · 15.61 tok/s</span></div></div></div>
         </div>
-        <details class="tableview">
+        <details>
           <summary>View as table</summary>
           <table>
-            <thead><tr><th>Build</th><th>Prefill tok/s</th><th>Decode tok/s</th><th>vs generic</th></tr></thead>
+            <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>vs generic</th></tr></thead>
             <tbody>
               <tr><td>generic arm64-v8a</td><td>20.51</td><td>12.73</td><td>1.00×</td></tr>
               <tr><td>-march=armv8.2a+i8mm+dotprod</td><td>101.43</td><td>17.00</td><td>4.94× / 1.34×</td></tr>
@@ -256,101 +306,89 @@
         </details>
       </div>
     </div>
-    <p class="muted"><strong>Read it top to bottom:</strong> the entire speedup arrives with the compiler flags — permission to use the chip's fast matrix instructions. The specialized library adds nothing after that. Most Android builds of llama.cpp never pass those flags.</p>
+    <p class="body-2 fade"><strong>Read it top to bottom.</strong> The entire speedup arrives with the compiler flags — permission to use the matrix instructions the silicon already has. The specialized library adds nothing after that. Most Android builds of llama.cpp never pass those flags.</p>
   </div>
 </section>
 
-<section id="findings" class="band">
-  <div class="col reveal">
-    <div class="sechead">
-      <div class="eyebrow">What we found</div>
-      <h2>Three results the folklore gets wrong</h2>
+<section id="findings" class="band grey">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">What we found</div>
+      <h2>Three results the<br>folklore gets wrong.</h2>
     </div>
     <div class="cards">
-      <div class="card">
-        <span class="k">Finding 01</span>
+      <div class="card fade">
         <div class="num">4.94<small>×</small></div>
-        <h3>The compiler flag is the whole ballgame</h3>
-        <p>One build flag — <code>-march=armv8.2a+i8mm+dotprod</code> — nearly quintuples prompt processing. It simply lets the compiler emit the matrix instructions the silicon already has. Most builds don't.</p>
+        <h3>The compiler flag is the whole ballgame.</h3>
+        <p>One build flag nearly quintuples prompt processing. It simply lets the compiler emit the matrix instructions the chip already has. Most builds don't.</p>
       </div>
-      <div class="card">
-        <span class="k">Finding 02</span>
+      <div class="card fade">
         <div class="num">+0<small>%</small></div>
-        <h3>KleidiAI adds nothing here</h3>
-        <p>Arm's own acceleration library, tested four ways — with and without llama.cpp's repack path: no measurable gain on this SoC for Q4_0. Once i8mm is enabled, plain compiled code already saturates the hardware.</p>
+        <h3>KleidiAI adds nothing here.</h3>
+        <p>Arm's own acceleration library, tested four ways. No measurable gain on this chip for Q4_0 — once i8mm is on, plain compiled code already saturates the hardware.</p>
       </div>
-      <div class="card">
-        <span class="k">Finding 03</span>
-        <div class="num">2&gt;6</div>
-        <h3>Fewer threads, faster answers</h3>
-        <p>Decode at 2 threads: <strong>17.3 tok/s</strong>. At 6 threads: <strong>13.8</strong>. The phone has 2 fast cores and 6 slow ones — spreading work across all of them drags the fast cores down to little-core pace.</p>
+      <div class="card fade">
+        <div class="num">2 &gt; 6</div>
+        <h3>Fewer threads, faster answers.</h3>
+        <p>Decode at 2 threads: 17.3 tok/s. At 6 threads: 13.8. Two fast cores beat two fast plus six slow — the slow ones become the bottleneck everyone waits for.</p>
       </div>
     </div>
-    <p class="muted">Every one of these contradicts what a reasonable developer would assume. That's the thesis: <strong>your phone's fastest configuration is an empirical question — so PocketTune answers it empirically.</strong></p>
+    <p class="body-2 center fade" style="max-width:60ch">Every one contradicts what a reasonable developer would assume. That's the point: <strong>your phone's fastest configuration is an empirical question — so PocketTune answers it empirically.</strong></p>
   </div>
 </section>
 
-<section id="how" class="band alt">
-  <div class="col reveal">
-    <div class="sechead">
-      <div class="eyebrow">How it works</div>
-      <h2>Detect. Sweep. Apply. Chat.</h2>
+<section id="how" class="band">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">How it works</div>
+      <h2>Detect. Sweep.<br>Apply. Chat.</h2>
     </div>
     <div class="steps">
-      <div class="step"><span class="k">01 · DETECT</span><h3>Read the silicon</h3><p>Which fast instructions does this chip have — <code>dotprod</code>? <code>i8mm</code>? <code>sve2</code>? How many fast vs slow cores? Read straight off the device.</p></div>
-      <div class="step"><span class="k">02 · SWEEP</span><h3>Benchmark on-device</h3><p>Compression formats × instruction paths × thread counts — measured for speed, memory, and <em>energy per token</em>, right on the phone.</p></div>
-      <div class="step"><span class="k">03 · APPLY</span><h3>Install the winner</h3><p>The best configuration isn't a report — it becomes the app's live settings, chosen on evidence.</p></div>
-      <div class="step"><span class="k">04 · USE</span><h3>Chat offline</h3><p>A private assistant running the tuned setup. Airplane mode is the demo: nothing leaves the phone.</p></div>
+      <div class="step fade"><span class="n">01</span><h3>Read the silicon</h3><p>Which fast instructions does this chip have — dotprod? i8mm? How many fast versus slow cores? Read straight off the device.</p></div>
+      <div class="step fade"><span class="n">02</span><h3>Benchmark on-device</h3><p>Compression formats, instruction paths, thread counts — measured for speed, memory and energy per token, right on the phone.</p></div>
+      <div class="step fade"><span class="n">03</span><h3>Install the winner</h3><p>The best configuration isn't a report. It becomes the app's live settings, chosen on evidence.</p></div>
+      <div class="step fade"><span class="n">04</span><h3>Chat offline</h3><p>A private assistant running the tuned setup. Airplane mode is the demo — nothing leaves the phone.</p></div>
     </div>
-    <div class="panel">
-      <div class="cgroup-title">Conceptual animation — each cell is one benchmarked configuration</div>
+    <div class="panel fade">
+      <div class="cgroup-title">Conceptual — each cell is one benchmarked configuration</div>
       <div class="sweep" id="sweep" aria-label="Animated grid showing a benchmark sweep across configurations"></div>
       <div class="sweep-status" id="sweep-status">warming up…</div>
     </div>
   </div>
 </section>
 
-<section id="repro" class="band">
-  <div class="col reveal">
-    <div class="sechead">
-      <div class="eyebrow">Reproducible by design</div>
-      <h2>One command reruns every number</h2>
+<section id="repro" class="band grey">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">Reproducible by design</div>
+      <h2>One command reruns<br>every number.</h2>
+      <p class="lead">Plug in any Android phone. Get your own numbers.</p>
     </div>
-    <p class="muted">The same harness that produced the findings ships in the repo. Plug in any Android phone, run it, get your own numbers — raw JSON included. Real output from the run above:</p>
-    <div class="term" aria-label="Terminal output of the benchmark harness">
+    <div class="term fade" aria-label="Terminal output of the benchmark harness">
       <div class="dots"><span></span><span></span><span></span></div>
       <div id="termbody"><span class="d">$</span> python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf<br></div>
     </div>
   </div>
 </section>
 
-<section class="band dark">
-  <div class="col reveal">
-    <div class="sechead">
-      <div class="eyebrow">Get PocketTune</div>
-      <h2>Stop guessing. Measure.</h2>
+<section class="band">
+  <div class="col center stack fade">
+    <h2>Stop guessing.<br>Measure.</h2>
+    <p class="lead narrow">Every component — quantization, i8mm, compiler flags, the harness — explained from zero.</p>
+    <div class="actions">
+      <a class="btn" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download the app</a>
+      <a class="chev" href="learn.html">Inside PocketTune</a>
     </div>
-    <p>Grab the app, or read the from-zero explainer of every component — quantization, i8mm, compiler flags, the harness — written for someone meeting this stack for the first time.</p>
-    <div class="cta-row">
-      <a class="btn solid big" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">⇩ Download the app</a>
-      <a class="btn outline big" style="background: transparent; color: inherit; border-color: color-mix(in srgb, currentColor 40%, transparent);" href="learn.html">Inside PocketTune →</a>
-    </div>
-    <span class="cta-note">APK · Android 9+ · arm64 · no account, no telemetry</span>
   </div>
 </section>
 
-<footer class="band">
+<footer>
   <div class="col">
-    <div><strong>PocketTune</strong> — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track</div>
+    <p class="small">PocketTune — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track. Open source under MIT. All measurements taken on a Nothing Phone 2a (MediaTek Dimensity 7200 Pro); raw data in <code>results/</code>.</p>
     <div class="row">
-      <span>Open source (MIT)</span>
-      <span>Measured on real hardware: Nothing Phone 2a · MediaTek Dimensity 7200 Pro</span>
-      <span>Raw data in <code>results/</code></span>
-    </div>
-    <div class="row">
-      <a href="learn.html">Architecture &amp; prerequisites</a>
+      <a href="learn.html">Inside PocketTune</a>
       <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
-      <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge page</a>
+      <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge</a>
       <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>
     </div>
   </div>
@@ -360,14 +398,14 @@
 (function () {
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* reveal + bars + count-ups */
+  /* fade-up + counters + bars */
   var counted = new WeakSet();
   function countUp(el) {
     if (counted.has(el)) return;
     counted.add(el);
     var target = parseFloat(el.dataset.count), dec = parseInt(el.dataset.dec || "0", 10);
     if (reduced) { el.textContent = target.toFixed(dec); return; }
-    var t0 = null, dur = 1100;
+    var t0 = null, dur = 1300;
     function tick(t) {
       if (!t0) t0 = t;
       var p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
@@ -381,17 +419,23 @@
     el.querySelectorAll(".databar[data-w]").forEach(function (b) { b.style.width = b.dataset.w + "%"; });
     el.querySelectorAll("[data-count]").forEach(countUp);
   }
-  var targets = document.querySelectorAll(".reveal, .hero .col");
+  var fades = document.querySelectorAll(".fade");
   if ("IntersectionObserver" in window && !reduced) {
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { if (en.isIntersecting) { trigger(en.target); io.unobserve(en.target); } });
-    }, { threshold: 0.12 });
-    targets.forEach(function (el) { io.observe(el); });
+      entries.forEach(function (en, i) {
+        if (en.isIntersecting) {
+          var el = en.target;
+          setTimeout(function () { trigger(el); }, Math.min(i, 4) * 80);
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    fades.forEach(function (el) { io.observe(el); });
   } else {
-    targets.forEach(trigger);
+    fades.forEach(trigger);
   }
 
-  /* hero canvas — microkernel tiles sweeping a matrix */
+  /* hero canvas — matmul tiles */
   var cv = document.getElementById("matmul");
   if (cv && !reduced) {
     var ctx = cv.getContext("2d"), T = 26, gap = 5, t = 0, last = 0;
@@ -410,7 +454,7 @@
     function frame(now) {
       if (now - last > 40) {
         last = now; t += 0.045;
-        var accent = css("--accent") || "#D9541E", line = css("--line") || "#D7DEE2";
+        var accent = css("--blue") || "#0071e3", hair = css("--hair") || "#d2d2d7";
         var w = cv.offsetWidth, h = cv.offsetHeight;
         var cols = Math.ceil(w / (T + gap)), rows = Math.ceil(h / (T + gap));
         ctx.clearRect(0, 0, w, h);
@@ -418,11 +462,11 @@
           var wave = Math.sin(t - (c + r) * 0.38);
           var x = c * (T + gap), y = r * (T + gap);
           if (wave > 0.75) {
-            ctx.fillStyle = hexA(accent, 0.10 + (wave - 0.75) * 1.6);
-            ctx.beginPath(); ctx.roundRect(x, y, T, T, 4); ctx.fill();
+            ctx.fillStyle = hexA(accent, 0.14 + (wave - 0.75) * 1.9);
+            ctx.beginPath(); ctx.roundRect(x, y, T, T, 5); ctx.fill();
           } else {
-            ctx.strokeStyle = hexA(line, 0.5); ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.roundRect(x + .5, y + .5, T - 1, T - 1, 4); ctx.stroke();
+            ctx.strokeStyle = hexA(hair, 0.55); ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.roundRect(x + .5, y + .5, T - 1, T - 1, 5); ctx.stroke();
           }
         }
       }
@@ -449,7 +493,7 @@
     var BEST = 19; // arch+Q4_0 · 2t — the real decode finding
     if (reduced) {
       cells.forEach(function (c, i) { c.el.className = "cell " + (i === BEST ? "best" : "done"); });
-      status.innerHTML = "best config: <b>arch build · Q4_0 · 2 threads on the big cores</b>";
+      status.innerHTML = "Best configuration: <b>arch build · Q4_0 · 2 threads on the big cores</b>";
     } else {
       var i = 0;
       setInterval(function () {
@@ -458,12 +502,12 @@
           var c = cells[i];
           c.el.className = "cell scan";
           var fake = (9 + Math.sin(i * 2.7) * 3 + (5 - c.c) * 0.9 + (c.q.indexOf("arch") > -1 ? 5 : 0)).toFixed(1);
-          status.innerHTML = "testing <b>" + c.q + " · " + threads[c.c] + "</b> … " + fake + " tok/s";
+          status.innerHTML = "Testing <b>" + c.q + " · " + threads[c.c] + "</b> … " + fake + " tok/s";
           i++;
         } else if (i === cells.length) {
           cells[cells.length - 1].el.className = "cell done";
           cells[BEST].el.className = "cell best";
-          status.innerHTML = "best config: <b>arch build · Q4_0 · 2 threads on the big cores</b> → applied ✓";
+          status.innerHTML = "Best configuration: <b>arch build · Q4_0 · 2 threads on the big cores</b> → applied ✓";
           i++;
         } else if (i > cells.length + 14) {
           cells.forEach(function (c) { c.el.className = "cell"; });
