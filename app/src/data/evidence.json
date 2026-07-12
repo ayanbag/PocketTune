@@ -1,0 +1,308 @@
+{
+  "schema": "pockettune.evidence.v1",
+  "runs": [
+    {
+      "source": "a142-20260712T094111Z.json",
+      "timestamp_utc": "20260712T094111Z",
+      "device": {
+        "manufacturer": "Nothing",
+        "model": "A142",
+        "soc": "Mediatek MT6886",
+        "has_i8mm": true,
+        "has_dotprod": true,
+        "has_sve2": true
+      },
+      "model_file": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+      "params": {
+        "prompt_tokens": 128,
+        "gen_tokens": 64,
+        "repetitions": 5,
+        "threads_swept": [
+          2,
+          4,
+          6
+        ],
+        "cooldown_s": 120
+      },
+      "variants": [
+        {
+          "name": "kleidiai",
+          "label": "KleidiAI",
+          "detail": "Arch flags + Arm KleidiAI microkernels",
+          "summary": {
+            "pp128": {
+              "2": 13.5915,
+              "4": 17.286008,
+              "6": 19.73741
+            },
+            "tg64": {
+              "2": 9.545963,
+              "4": 10.846358,
+              "6": 11.023567
+            }
+          },
+          "battery_before": {
+            "level_pct": 46,
+            "temperature_c": 35.0
+          },
+          "battery_after": {
+            "level_pct": 44,
+            "temperature_c": 36.0
+          }
+        },
+        {
+          "name": "baseline",
+          "label": "Baseline",
+          "detail": "Default build, no arch flags",
+          "summary": {
+            "pp128": {
+              "2": 14.557294,
+              "4": 17.63914,
+              "6": 19.76133
+            },
+            "tg64": {
+              "2": 10.050328,
+              "4": 11.255556,
+              "6": 12.076507
+            }
+          },
+          "battery_before": {
+            "level_pct": 44,
+            "temperature_c": 36.0
+          },
+          "battery_after": {
+            "level_pct": 43,
+            "temperature_c": 36.0
+          }
+        }
+      ]
+    },
+    {
+      "source": "a142-20260712T112232Z.json",
+      "timestamp_utc": "20260712T112232Z",
+      "device": {
+        "manufacturer": "Nothing",
+        "model": "A142",
+        "soc": "Mediatek MT6886",
+        "has_i8mm": true,
+        "has_dotprod": true,
+        "has_sve2": true
+      },
+      "model_file": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+      "params": {
+        "prompt_tokens": 128,
+        "gen_tokens": 64,
+        "repetitions": 5,
+        "threads_swept": [
+          2,
+          4,
+          6
+        ],
+        "cooldown_s": 120
+      },
+      "variants": [
+        {
+          "name": "generic",
+          "label": "Generic arm64",
+          "detail": "Plain armv8-a build \u2014 what a non-optimized app ships",
+          "summary": {
+            "pp128": {
+              "2": 17.388639,
+              "4": 17.925564,
+              "6": 20.514182
+            },
+            "tg64": {
+              "2": 12.154997,
+              "4": 11.590848,
+              "6": 12.730397
+            }
+          },
+          "battery_before": {
+            "level_pct": 37,
+            "temperature_c": 32.0
+          },
+          "battery_after": {
+            "level_pct": 36,
+            "temperature_c": 35.0
+          }
+        },
+        {
+          "name": "arch",
+          "label": "Arch-tuned",
+          "detail": "armv8.2-a + dotprod + i8mm flags, Q4_0 online repack",
+          "summary": {
+            "pp128": {
+              "2": 84.605707,
+              "4": 93.258102,
+              "6": 101.427313
+            },
+            "tg64": {
+              "2": 17.003851,
+              "4": 15.590651,
+              "6": 15.749573
+            }
+          },
+          "battery_before": {
+            "level_pct": 36,
+            "temperature_c": 34.0
+          },
+          "battery_after": {
+            "level_pct": 35,
+            "temperature_c": 35.0
+          }
+        },
+        {
+          "name": "kleidiai",
+          "label": "KleidiAI",
+          "detail": "Arch flags + Arm KleidiAI microkernels",
+          "summary": {
+            "pp128": {
+              "2": 83.033271,
+              "4": 91.379947,
+              "6": 100.085041
+            },
+            "tg64": {
+              "2": 15.610392,
+              "4": 15.155467,
+              "6": 13.527923
+            }
+          },
+          "battery_before": {
+            "level_pct": 35,
+            "temperature_c": 35.0
+          },
+          "battery_after": {
+            "level_pct": 34,
+            "temperature_c": 35.0
+          }
+        }
+      ]
+    },
+    {
+      "source": "a142-20260712T115543Z.json",
+      "timestamp_utc": "20260712T115543Z",
+      "device": {
+        "manufacturer": "Nothing",
+        "model": "A142",
+        "soc": "Mediatek MT6886",
+        "has_i8mm": true,
+        "has_dotprod": true,
+        "has_sve2": true
+      },
+      "model_file": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+      "params": {
+        "prompt_tokens": 128,
+        "gen_tokens": 64,
+        "repetitions": 5,
+        "threads_swept": [
+          2,
+          4,
+          6
+        ],
+        "cooldown_s": 90
+      },
+      "variants": [
+        {
+          "name": "arch-norepack",
+          "label": "Arch, no repack",
+          "detail": "Arch flags with llama.cpp's Q4_0 repack disabled",
+          "summary": {
+            "pp128": {
+              "2": 100.561987,
+              "4": 101.025927,
+              "6": 103.901163
+            },
+            "tg64": {
+              "2": 17.333201,
+              "4": 15.204868,
+              "6": 13.936378
+            }
+          },
+          "battery_before": {
+            "level_pct": 32,
+            "temperature_c": 34.0
+          },
+          "battery_after": {
+            "level_pct": 31,
+            "temperature_c": 35.0
+          }
+        },
+        {
+          "name": "kleidiai-norepack",
+          "label": "KleidiAI, no repack",
+          "detail": "KleidiAI without llama.cpp's own repack \u2014 standalone value",
+          "summary": {
+            "pp128": {
+              "2": 83.61599,
+              "4": 95.865031,
+              "6": 98.087469
+            },
+            "tg64": {
+              "2": 16.757641,
+              "4": 15.149386,
+              "6": 13.761755
+            }
+          },
+          "battery_before": {
+            "level_pct": 31,
+            "temperature_c": 35.0
+          },
+          "battery_after": {
+            "level_pct": 31,
+            "temperature_c": 36.0
+          }
+        },
+        {
+          "name": "arch",
+          "label": "Arch-tuned",
+          "detail": "armv8.2-a + dotprod + i8mm flags, Q4_0 online repack",
+          "summary": {
+            "pp128": {
+              "2": 85.269488,
+              "4": 88.378618,
+              "6": 96.15886
+            },
+            "tg64": {
+              "2": 15.148296,
+              "4": 15.553589,
+              "6": 15.346217
+            }
+          },
+          "battery_before": {
+            "level_pct": 30,
+            "temperature_c": 36.0
+          },
+          "battery_after": {
+            "level_pct": 30,
+            "temperature_c": 36.0
+          }
+        },
+        {
+          "name": "kleidiai",
+          "label": "KleidiAI",
+          "detail": "Arch flags + Arm KleidiAI microkernels",
+          "summary": {
+            "pp128": {
+              "2": 80.887965,
+              "4": 91.274122,
+              "6": 98.12976
+            },
+            "tg64": {
+              "2": 16.410548,
+              "4": 14.980296,
+              "6": 13.585074
+            }
+          },
+          "battery_before": {
+            "level_pct": 30,
+            "temperature_c": 36.0
+          },
+          "battery_after": {
+            "level_pct": 29,
+            "temperature_c": 36.0
+          }
+        }
+      ]
+    }
+  ]
+}

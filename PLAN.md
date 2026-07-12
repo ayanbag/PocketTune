@@ -9,8 +9,8 @@ The 9-week plan below is superseded. Remaining work, in priority order:
 
 | Day | Work |
 |---|---|
-| **1 (Jul 13)** | **llama.rn audit** — does it ship arch flags? Decides the whole app story. Then scaffold RN app. |
-| **2–4** | Minimal app: chat + CPU detect + apply-best-config. **Skip the in-app sweep UI** — `harness/bench.py` already does sweeps and is the reusable artifact. |
+| **1 (Jul 13)** | ✅ **llama.rn audit done** — prebuilts ship 6 arm64 variants with runtime dispatch (`v8_2_dotprod_i8mm` on the 2a) but **no KleidiAI**; fallback path taken as planned. App built same day: 4 tabs (Device/Tune/Chat/Lab), in-app sweep via llama.rn `bench()` turned out cheap so it's IN (threads × flash-attn × KV-quant), tokens-per-joule sampled from the battery rail. |
+| **2–4** | On-device verification of the app on both phones; fix what breaks; polish visuals. |
 | **5** | Quantization sweep (models downloaded) + error-bar reruns so the KleidiAI claim is defensible. |
 | **6** | README with one-command reproduction, results write-up, site polish. |
 | **7 (Jul 19)** | Demo video (<3 min) + Devpost submission. Buffer. |

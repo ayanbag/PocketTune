@@ -19,9 +19,12 @@ Differentiators (decided 2026-07-12 after scouting the landscape): **tokens-per-
   - Published benchmark numbers come from these phones only, never an emulator.
 - **Hackathon rules**: repo must be public with an MIT or Apache-2.0 LICENSE at root; project must install and run from the README instructions alone; optimization gains must be measurable and reproducible.
 
-## Current status
+## Current status (2026-07-13)
 
-Planning complete (see PLAN.md). **No code exists yet.** Next milestone is the Week-1 feasibility spike.
+- **Spike done**: llama.cpp cross-compiled (7 variants in `vendor/llama.cpp/build-android-*`), harness `harness/bench.py` works, raw results in `results/`. Headline: **4.94× prefill** from arch flags on the 2a; KleidiAI ≈ arch-flags for Q4_0 (llama.cpp's own aarch64 repack already covers it) — reported honestly as an attribution ladder.
+- **App built**: RN 0.86 + TypeScript in `app/` — four tabs (Device / Tune / Chat / Lab), llama.rn 0.12.5 **prebuilts** (no KleidiAI inside; runtime-dispatches `v8_2_dotprod_i8mm` on the 2a, `v8_2_dotprod` on the 7a). In-app tuner sweeps threads × flash-attn × KV-quant via llama.rn `bench()`, applies the best config; chat shows measured tok/s. Lab tab bundles `app/src/data/evidence.json` (regenerate: `uv run tools/make_app_evidence.py` after results change).
+- **Windows build gotchas**: llama.rn's postinstall spawns `tar` — Git's GNU tar fails on `C:\` paths; prepend a dir containing only System32's `tar.exe` to PATH before `npm install`. Gradle needs `JAVA_HOME=D:\Softwares\Android Studio\jbr`. `reactNativeArchitectures=arm64-v8a` is set in `app/android/gradle.properties` — do not re-add other ABIs.
+- Remaining (see PLAN.md compressed schedule): on-device app verification, quantization-sweep reruns, demo video, Devpost submission.
 
 ## Local toolchain (verified 2026-07-12, Windows x86)
 

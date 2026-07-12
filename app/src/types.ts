@@ -1,0 +1,99 @@
+/** Shared domain types for PocketTune. */
+
+export interface CoreCluster {
+  /** e.g. "Cortex-A715" or "0xd4d" when unknown */
+  name: string;
+  count: number;
+  maxMhz: number;
+  cpuIds: number[];
+}
+
+export interface DeviceProfile {
+  manufacturer: string;
+  model: string;
+  marketingName: string | null;
+  soc: string;
+  androidVersion: string;
+  abi: string;
+  features: string[];
+  hasDotprod: boolean;
+  hasI8mm: boolean;
+  hasSve: boolean;
+  hasSve2: boolean;
+  hasSme: boolean;
+  clusters: CoreCluster[];
+  totalCores: number;
+  bigCoreIds: number[];
+  memTotalMb: number;
+  /** which llama.rn prebuilt variant the runtime dispatch will pick */
+  kernelPath: string;
+}
+
+export interface BatteryState {
+  levelPct: number | null;
+  temperatureC: number | null;
+  charging: boolean | null;
+  /** instantaneous draw in watts, when the kernel exposes it */
+  watts: number | null;
+}
+
+export interface CatalogModel {
+  id: string;
+  name: string;
+  quant: string;
+  params: string;
+  sizeBytes: number;
+  url: string;
+  file: string;
+  blurb: string;
+  recommendedWhen?: 'i8mm' | 'dotprod' | 'any';
+}
+
+export type ModelStatus = 'none' | 'downloading' | 'ready';
+
+export interface ModelState {
+  status: ModelStatus;
+  /** 0..1 while downloading */
+  progress: number;
+  bytesWritten: number;
+  path: string | null;
+  error: string | null;
+}
+
+export interface TuneConfig {
+  nThreads: number;
+  flashAttn: 'auto' | 'on' | 'off';
+  kvCache: 'f16' | 'q8_0';
+}
+
+export interface SweepPoint {
+  config: TuneConfig;
+  label: string;
+  prefillTps: number;
+  decodeTps: number;
+  /** tokens per joule during decode, null when power rails unreadable */
+  tokensPerJoule: number | null;
+  watts: number | null;
+  isBaseline: boolean;
+}
+
+export interface TuneRun {
+  timestamp: string;
+  modelId: string;
+  modelFile: string;
+  mode: 'quick' | 'full';
+  points: SweepPoint[];
+  best: SweepPoint;
+  baseline: SweepPoint;
+  decodeGain: number;
+  prefillGain: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  /** decode tok/s reported by the engine for this reply */
+  tps?: number;
+  prefillTps?: number;
+}
