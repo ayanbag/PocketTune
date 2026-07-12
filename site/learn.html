@@ -3,148 +3,161 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inside PocketTune — architecture, components, and the knowledge to follow it all</title>
+<meta name="color-scheme" content="dark">
+<title>INSIDE POCKETTUNE — architecture, components, and the knowledge to follow it all</title>
 <meta name="description" content="Every component of PocketTune explained from zero: quantization, Arm CPU instructions, compiler flags, llama.cpp, the benchmark harness, and why each piece was chosen.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23070B0D'/><text y='.9em' font-size='72' x='14' fill='%233DF29B'>▮</text></svg>">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; }
   img { max-width: 100%; }
 
   :root {
-    --ground: #F4F6F7; --surface: #FFFFFF; --surface-2: #EAEEF0;
-    --ink: #161F28; --ink-2: #5B6B79; --ink-3: #8595A2; --line: #D7DEE2;
-    --accent: #D9541E; --accent-ink: #FFFFFF; --accent-soft: #FBEAE1;
-    --good: #2C9865; --good-soft: #E2F2E9; --bad: #A33B3B; --bad-soft: #F5E4E4;
-    --mono: "Cascadia Code", "SF Mono", "JetBrains Mono", Consolas, ui-monospace, monospace;
-    --sans: "Segoe UI Variable Text", "Segoe UI", "Avenir Next", system-ui, -apple-system, sans-serif;
-    --disp: "Segoe UI Variable Display", "Segoe UI", "Avenir Next", system-ui, -apple-system, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ground: #10171E; --surface: #19232C; --surface-2: #202C37;
-      --ink: #E8EDF0; --ink-2: #8FA0AD; --ink-3: #647482; --line: #2B3843;
-      --accent: #FF7B47; --accent-ink: #1A1108; --accent-soft: #33221A;
-      --good: #4CC38A; --good-soft: #16352A; --bad: #E08585; --bad-soft: #3A2224;
-    }
+    --ground: #070B0D; --panel: #0C1214; --panel-2: #101A1D;
+    --grat: #1C2B2E; --grat-soft: #142023;
+    --phos: #3DF29B; --amber: #FFB454; --bad: #FF6B5E;
+    --ink: #C9D8D3; --ink-2: #7E918C; --ink-3: #52645F;
+    --mono: "Cascadia Code", "JetBrains Mono", Consolas, "SF Mono", ui-monospace, monospace;
   }
 
   html { background: var(--ground); scroll-behavior: smooth; }
-  body { font-family: var(--sans); color: var(--ink); line-height: 1.65; font-size: 16px; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+  body { font-family: var(--mono); color: var(--ink); line-height: 1.7; font-size: 14.5px; position: relative; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px); opacity: .5; }
 
-  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--phos); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, summary:focus-visible { outline: 1px solid var(--phos); outline-offset: 3px; }
 
-  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
-  h1 { font-family: var(--disp); font-weight: 750; letter-spacing: -0.025em; font-size: clamp(34px, 6vw, 52px); line-height: 1.05; text-wrap: balance; margin: 0; }
-  h2 { font-family: var(--disp); font-weight: 700; letter-spacing: -0.015em; font-size: 26px; line-height: 1.2; text-wrap: balance; margin: 0; }
-  h3 { font-size: 16.5px; font-weight: 650; margin: 0; }
-  p { margin: 0; max-width: 70ch; }
-  strong { font-weight: 650; }
-  code { font-family: var(--mono); font-size: 0.86em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
-  section { padding: 64px 0 0; }
-  section > .wrap { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+  .label.g { color: var(--phos); }
+  .label.a { color: var(--amber); }
+  h1 { font-weight: 700; letter-spacing: .01em; text-transform: uppercase; font-size: clamp(26px, 4.6vw, 42px); line-height: 1.15; margin: 0; }
+  h1 .hl { color: var(--phos); text-shadow: 0 0 18px rgba(61,242,155,.4); }
+  h2 { font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 19px; line-height: 1.3; margin: 0; }
+  h2::before { content: "// "; color: var(--phos); }
+  h3 { font-size: 13.5px; font-weight: 700; margin: 0; letter-spacing: .03em; }
+  p { margin: 0; max-width: 74ch; }
+  .dim { color: var(--ink-2); }
+  strong, b { font-weight: 700; color: var(--ink); }
+  code { font-size: .92em; color: var(--amber); background: var(--panel-2); padding: 1px 6px; border: 1px solid var(--grat-soft); }
+  em, i { color: var(--ink); font-style: italic; }
+  section { padding: 66px 0 0; }
+  section > .wrap { display: flex; flex-direction: column; gap: 18px; }
   section > .wrap > header { display: flex; flex-direction: column; gap: 6px; }
 
-  .reveal { opacity: 0; transform: translateY(16px); }
-  .in { opacity: 1; transform: none; transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+  .reveal { opacity: 0; }
+  .in { animation: flicker .5s steps(4, end) forwards; }
+  @keyframes flicker { 0% {opacity:0} 30% {opacity:.6} 45% {opacity:.2} 70% {opacity:.85} 100% {opacity:1} }
+  @keyframes blink { 50% { opacity: .15; } }
   @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; }
-    .in { transition: none; }
+    .reveal { opacity: 1; }
+    .in { animation: none; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    body::after { display: none; }
   }
 
-  nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--ground) 86%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-  nav .wrap { display: flex; align-items: center; gap: 22px; padding-top: 13px; padding-bottom: 13px; }
-  .wordmark { font-family: var(--disp); font-weight: 750; letter-spacing: -.02em; font-size: 18px; color: var(--ink); text-decoration: none; }
-  .wordmark b { color: var(--accent); }
-  nav .links { margin-left: auto; display: flex; gap: 18px; flex-wrap: wrap; }
-  nav .links a { font-size: 13.5px; color: var(--ink-2); text-decoration: none; }
-  nav .links a:hover { color: var(--accent); }
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(7,11,13,.92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--grat); }
+  nav .wrap { display: flex; align-items: center; gap: 20px; padding-top: 12px; padding-bottom: 12px; }
+  .wordmark { font-weight: 700; letter-spacing: .12em; font-size: 14px; color: var(--ink); text-decoration: none; text-transform: uppercase; }
+  .wordmark::before { content: "▮ "; color: var(--phos); }
+  nav .links { margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap; }
+  nav .links a { font-size: 12px; color: var(--ink-2); text-decoration: none; letter-spacing: .08em; text-transform: uppercase; }
+  nav .links a:hover { color: var(--phos); }
 
-  .pagehead { padding: 72px 0 8px; }
+  .pagehead { padding: 70px 0 6px; border-bottom: 1px solid transparent; }
   .pagehead .wrap { display: flex; flex-direction: column; gap: 16px; }
-  .lede { font-size: 19px; color: var(--ink-2); max-width: 60ch; }
+  .lede { font-size: 15px; color: var(--ink-2); max-width: 66ch; }
+  .cursor { display: inline-block; width: .55em; height: 1em; background: var(--phos); vertical-align: -0.12em; animation: blink 1s steps(1) infinite; box-shadow: 0 0 12px rgba(61,242,155,.6); }
 
-  /* table of contents */
   .toc { display: flex; flex-wrap: wrap; gap: 10px; }
-  .toc a { font-family: var(--mono); font-size: 12.5px; padding: 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); text-decoration: none; transition: border-color .2s ease, color .2s ease; }
-  .toc a:hover { border-color: var(--accent); color: var(--accent); }
+  .toc a { font-size: 11.5px; letter-spacing: .06em; padding: 6px 13px; border: 1px solid var(--grat); background: var(--panel); color: var(--ink-2); text-decoration: none; text-transform: uppercase; transition: border-color .2s ease, color .2s ease; }
+  .toc a:hover { border-color: var(--phos); color: var(--phos); }
 
-  /* glossary cards */
-  .glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 14px; }
-  .g-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; transition: transform .2s ease, border-color .2s ease; }
-  .g-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-  .g-card .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
-  .g-card p { font-size: 14px; color: var(--ink-2); }
-  .g-card p b, .g-card p strong { color: var(--ink); }
+  /* panels */
+  .panel { position: relative; background: var(--panel); border: 1px solid var(--grat); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .panel::before, .panel::after { content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none; }
+  .panel::before { top: -1px; left: -1px; border-top: 2px solid var(--phos); border-left: 2px solid var(--phos); }
+  .panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--phos); border-right: 2px solid var(--phos); }
+
+  /* glossary */
+  .glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+  .g-card { background: var(--panel); border: 1px solid var(--grat); padding: 20px; display: flex; flex-direction: column; gap: 8px; transition: border-color .2s ease, box-shadow .2s ease; }
+  .g-card:hover { border-color: var(--phos); box-shadow: 0 0 22px rgba(61,242,155,.1); }
+  .g-card .k { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--phos); }
+  .g-card .k::before { content: "["; color: var(--ink-3); }
+  .g-card .k::after { content: "]"; color: var(--ink-3); }
+  .g-card p { font-size: 12.5px; color: var(--ink-2); }
 
   /* architecture stack */
   .arch { display: flex; flex-direction: column; gap: 8px; }
-  .arch-row { display: grid; grid-template-columns: 148px 1fr; gap: 8px; }
-  .arch-label { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); align-self: center; letter-spacing: .06em; text-transform: uppercase; }
-  .arch-box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 13px 16px; font-size: 14px; transition: border-color .2s ease; }
-  .arch-box:hover { border-color: var(--accent); }
-  .arch-box .t { font-weight: 650; }
-  .arch-box .d { color: var(--ink-2); font-size: 13px; }
-  .arch-box.silicon { background: var(--accent-soft); border-color: transparent; }
-  .arch-conn { display: grid; grid-template-columns: 148px 1fr; }
-  .arch-conn span { grid-column: 2; justify-self: center; width: 2px; height: 18px; background: repeating-linear-gradient(to bottom, var(--accent) 0 5px, transparent 5px 10px); background-size: 100% 20px; animation: flow 1s linear infinite; }
+  .arch-row { display: grid; grid-template-columns: 150px 1fr; gap: 8px; }
+  .arch-label { font-size: 10.5px; color: var(--ink-3); align-self: center; letter-spacing: .14em; text-transform: uppercase; }
+  .arch-box { background: var(--panel); border: 1px solid var(--grat); padding: 13px 16px; font-size: 13px; transition: border-color .2s ease; }
+  .arch-box:hover { border-color: var(--phos); }
+  .arch-box .t { font-weight: 700; }
+  .arch-box .d { color: var(--ink-2); font-size: 12px; }
+  .arch-box.silicon { border-color: var(--phos); box-shadow: inset 0 0 24px rgba(61,242,155,.06); }
+  .arch-box.silicon .t { color: var(--phos); }
+  .arch-conn { display: grid; grid-template-columns: 150px 1fr; }
+  .arch-conn span { grid-column: 2; justify-self: center; width: 2px; height: 18px; background: repeating-linear-gradient(to bottom, var(--phos) 0 5px, transparent 5px 10px); background-size: 100% 20px; animation: flow 1s linear infinite; opacity: .7; }
   @keyframes flow { to { background-position: 0 20px; } }
   @media (max-width: 560px) { .arch-row { grid-template-columns: 1fr; gap: 2px; } .arch-conn { grid-template-columns: 1fr; } .arch-conn span { grid-column: 1; } }
 
   /* repo tree */
-  .tree { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; font-family: var(--mono); font-size: 13.5px; line-height: 1.9; overflow-x: auto; }
-  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree { background: #050809; border: 1px solid var(--grat); padding: 20px 22px; font-size: 12.5px; line-height: 2; overflow-x: auto; }
+  .tree .dir { color: var(--phos); font-weight: 700; }
   .tree .cm { color: var(--ink-3); }
 
   /* tables */
-  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
-  th { text-align: left; font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-  td { padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--grat); background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 12.5px; }
+  th { text-align: left; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--grat); }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--grat-soft); vertical-align: top; font-variant-numeric: tabular-nums; }
   tr:last-child td { border-bottom: none; }
-  td .why { color: var(--ink-2); font-size: 13.5px; }
-  td.name { font-weight: 650; white-space: nowrap; }
-  td.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
-  .flag { font-family: var(--mono); font-size: 12px; padding: 2px 9px; border-radius: 6px; font-weight: 500; }
-  .flag.on { background: var(--good-soft); color: var(--good); }
-  .flag.off { background: var(--bad-soft); color: var(--bad); }
+  tr:hover td { background: rgba(61,242,155,.03); }
+  td .why { color: var(--ink-2); font-size: 12px; }
+  td.name { font-weight: 700; white-space: nowrap; }
+  td.mono { white-space: nowrap; color: var(--amber); }
+  .flag { font-size: 10.5px; padding: 2px 9px; font-weight: 700; letter-spacing: .06em; }
+  .flag.on { color: var(--phos); border: 1px solid rgba(61,242,155,.4); }
+  .flag.off { color: var(--bad); border: 1px solid rgba(255,107,94,.35); }
 
-  .callout { border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; padding: 16px 20px; font-size: 14.5px; }
-  .callout p { max-width: none; }
+  .callout { border-left: 2px solid var(--amber); background: var(--panel); padding: 16px 20px; font-size: 13px; }
+  .callout p { max-width: none; color: var(--ink-2); }
+  .callout .t { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 6px; }
 
-  footer { margin-top: 88px; border-top: 1px solid var(--line); padding: 26px 0 48px; }
-  footer .wrap { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--ink-2); }
+  footer { margin-top: 90px; border-top: 1px solid var(--grat); padding: 26px 0 52px; }
+  footer .wrap { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  footer .sig { color: var(--ink-3); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="wrap">
-    <a class="wordmark" href="index.html">Pocket<b>Tune</b></a>
+    <a class="wordmark" href="index.html">PocketTune</a>
     <div class="links">
-      <a href="#prereq">Prerequisites</a>
+      <a href="#prereq">Prereqs</a>
       <a href="#arch">Architecture</a>
       <a href="#components">Components</a>
       <a href="#method">Method</a>
-      <a href="index.html">← Landing</a>
+      <a href="index.html">[ ← Landing ]</a>
     </div>
   </div>
 </nav>
 
 <header class="pagehead">
   <div class="wrap">
-    <div class="eyebrow">Arm Create : AI Optimization Challenge 2026 · Mobile AI Track · internal notes</div>
-    <h1>Inside PocketTune</h1>
+    <div class="label g">ARM CREATE : AI OPTIMIZATION CHALLENGE 2026 · MOBILE AI TRACK · INTERNAL NOTES</div>
+    <h1>Inside <span class="hl">PocketTune</span><span class="cursor"></span></h1>
     <p class="lede">Everything on this page assumes zero background. Read it top to bottom and the landing page's claims — and every design decision in the repo — should make complete sense.</p>
     <div class="toc">
-      <a href="#prereq">1 · Prerequisite knowledge</a>
-      <a href="#arch">2 · Architecture</a>
-      <a href="#components">3 · Components &amp; why</a>
-      <a href="#method">4 · The experiment method</a>
-      <a href="#findings">5 · Findings so far</a>
+      <a href="#prereq">01 · Prerequisites</a>
+      <a href="#arch">02 · Architecture</a>
+      <a href="#components">03 · Components</a>
+      <a href="#method">04 · Method</a>
+      <a href="#findings">05 · Findings</a>
     </div>
   </div>
 </header>
@@ -152,49 +165,49 @@
 <section id="prereq" class="reveal">
   <div class="wrap">
     <header>
-      <div class="eyebrow">1 · Prerequisite knowledge</div>
+      <div class="label a">SECTION 01 · PREREQUISITE KNOWLEDGE</div>
       <h2>Ten ideas that unlock the whole project</h2>
     </header>
     <div class="glossary">
       <div class="g-card">
-        <span class="k">On-device LLM</span>
+        <span class="k">ON-DEVICE LLM</span>
         <p>ChatGPT runs in a data center. A <b>small</b> language model (1–3 billion parameters instead of trillions) can run <b>on the phone itself</b> — no internet, no account, fully private. Slower and less capable, but yours.</p>
       </div>
       <div class="g-card">
-        <span class="k">Quantization &amp; GGUF</span>
+        <span class="k">QUANTIZATION &amp; GGUF</span>
         <p>A model is billions of numbers. At full precision each takes 4 bytes → a 1B model would be ~4&nbsp;GB. <b>Quantization compresses each number to ~4 bits</b>, shrinking the model to ~700&nbsp;MB with minor quality loss. <code>Q4_0</code>, <code>Q4_K_M</code>, <code>Q8_0</code> are different compression schemes; <b>GGUF</b> is the file format that stores them.</p>
       </div>
       <div class="g-card">
-        <span class="k">Prefill vs decode</span>
-        <p>Two phases of answering. <b>Prefill (pp)</b>: the model reads your prompt — parallel work, can be very fast. <b>Decode (tg)</b>: it writes the answer one token at a time — sequential, always slower. We measure both in <b>tokens per second</b>; a token ≈ ¾ of a word.</p>
+        <span class="k">PREFILL VS DECODE</span>
+        <p>Two phases of answering. <b>Prefill (pp)</b>: the model reads your prompt — parallel work, can be very fast. <b>Decode (tg)</b>: it writes the answer one token at a time — sequential, always slower. Both measured in <b>tokens per second</b>; a token ≈ ¾ of a word.</p>
       </div>
       <div class="g-card">
-        <span class="k">Matrix multiplication</span>
-        <p>Nearly all LLM compute is multiplying huge grids of numbers together, billions of times per answer. Whoever does matmul faster, wins. Everything below is about making matmul faster.</p>
+        <span class="k">MATRIX MULTIPLICATION</span>
+        <p>Nearly all LLM compute is multiplying huge grids of numbers, billions of times per answer. Whoever does matmul faster, wins. Everything below is about making matmul faster.</p>
       </div>
       <div class="g-card">
-        <span class="k">SIMD instructions: dotprod &amp; i8mm</span>
+        <span class="k">SIMD: DOTPROD &amp; I8MM</span>
         <p>Arm chips include special instructions that crunch many numbers in one step. <code>dotprod</code> (common) is a good shortcut; <code>i8mm</code> (newer, Armv8.6+) is a <b>much better one for 8-bit integer matmul</b> — exactly what quantized models need. Our Nothing 2a has i8mm; a Pixel 7a doesn't.</p>
       </div>
       <div class="g-card">
-        <span class="k">The -march compiler flag</span>
+        <span class="k">THE -MARCH FLAG</span>
         <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of the fast instructions. <code>-march=armv8.2a+i8mm+dotprod</code> is permission to emit them. This single flag was worth <b>4.94×</b> on prefill in our measurements. Omit it and the silicon idles.</p>
       </div>
       <div class="g-card">
-        <span class="k">big.LITTLE cores</span>
-        <p>Phone CPUs mix <b>fast, power-hungry cores</b> with <b>slow, efficient ones</b>. The 2a: 2× fast A715 + 6× slow A510. Counter-intuition: using <b>all 8</b> cores makes generation <i>slower</i> than using just the 2 fast ones — the slow cores become the bottleneck everyone waits for.</p>
+        <span class="k">BIG.LITTLE CORES</span>
+        <p>Phone CPUs mix <b>fast, power-hungry cores</b> with <b>slow, efficient ones</b>. The 2a: 2× fast A715 + 6× slow A510. Counter-intuition: using <b>all 8</b> cores makes generation <i>slower</i> than the 2 fast ones alone — the slow cores become the bottleneck everyone waits for.</p>
       </div>
       <div class="g-card">
-        <span class="k">KleidiAI</span>
-        <p>Arm's official library of hand-tuned matmul routines, meant to exploit dotprod/i8mm/SME2. The obvious assumption — "turn it on, get speed" — is what we tested. Result on this chip, for Q4_0: <b>no measurable gain</b> once the compiler flags are right. Plain compiled i8mm code already saturates the hardware.</p>
+        <span class="k">KLEIDIAI</span>
+        <p>Arm's official library of hand-tuned matmul routines for dotprod/i8mm/SME2. The obvious assumption — "turn it on, get speed" — is what we tested. Result on this chip, for Q4_0: <b>no measurable gain</b> once the compiler flags are right. Plain compiled i8mm code already saturates the hardware.</p>
       </div>
       <div class="g-card">
-        <span class="k">llama.cpp &amp; llama-bench</span>
-        <p><b>llama.cpp</b> is the open-source C++ engine that actually runs GGUF models on CPUs — the industry standard for local inference. <b>llama-bench</b> is its built-in stopwatch: it loads a model, runs fixed workloads, and reports tok/s as JSON.</p>
+        <span class="k">LLAMA.CPP &amp; LLAMA-BENCH</span>
+        <p><b>llama.cpp</b> is the open-source C++ engine that runs GGUF models on CPUs — the industry standard for local inference. <b>llama-bench</b> is its built-in stopwatch: it loads a model, runs fixed workloads, reports tok/s as JSON.</p>
       </div>
       <div class="g-card">
-        <span class="k">adb &amp; cross-compilation</span>
-        <p><b>adb</b> (Android Debug Bridge) is a USB command line to the phone: push files, run programs, read sensors. <b>Cross-compilation</b> is building arm64 phone binaries on an x86 laptop — the Android <b>NDK</b> provides the compiler that makes this possible. No Mac required.</p>
+        <span class="k">ADB &amp; CROSS-COMPILATION</span>
+        <p><b>adb</b> (Android Debug Bridge) is a USB command line to the phone: push files, run programs, read sensors. <b>Cross-compilation</b> builds arm64 phone binaries on an x86 laptop — the Android <b>NDK</b> provides the compiler. No Mac required.</p>
       </div>
     </div>
   </div>
@@ -203,35 +216,35 @@
 <section id="arch" class="reveal">
   <div class="wrap">
     <header>
-      <div class="eyebrow">2 · Architecture</div>
+      <div class="label a">SECTION 02 · ARCHITECTURE</div>
       <h2>From TypeScript down to the silicon</h2>
     </header>
-    <p>The product is a stack: each layer only talks to the one below it. The user never sees anything below the first row — but every claim on the landing page was produced by the bottom three.</p>
+    <p class="dim">The product is a stack: each layer only talks to the one below it. The user never sees anything below the first row — but every claim on the landing page was produced by the bottom three.</p>
     <div class="arch">
       <div class="arch-row">
-        <div class="arch-label">App · TypeScript</div>
+        <div class="arch-label">APP · TS</div>
         <div class="arch-box"><span class="t">React Native app</span> — <span class="d">chat UI, the "optimization lab" (sweep + results screens), model downloads. All authored code is TypeScript — by design, no C++ or Kotlin is ever written in this project.</span></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
-        <div class="arch-label">Bindings</div>
-        <div class="arch-box"><span class="t">llama.rn</span> — <span class="d">a prebuilt bridge that lets JavaScript call llama.cpp. The open question we're investigating: do its prebuilt binaries include the arch flags? If not, every RN-based LLM app ships the slow path.</span></div>
+        <div class="arch-label">BINDINGS</div>
+        <div class="arch-box"><span class="t">llama.rn</span> — <span class="d">a prebuilt bridge that lets JavaScript call llama.cpp. Open question under investigation: do its prebuilt binaries include the arch flags? If not, every RN-based LLM app ships the slow path.</span></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
-        <div class="arch-label">Engine · C++</div>
+        <div class="arch-label">ENGINE · C++</div>
         <div class="arch-box"><span class="t">llama.cpp</span> — <span class="d">loads the GGUF model, runs the matmuls. We compile it ourselves with the NDK, once per configuration under test (7 variants so far).</span></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
-        <div class="arch-label">Silicon</div>
+        <div class="arch-label">SILICON</div>
         <div class="arch-box silicon"><span class="t">Arm CPU — Dimensity 7200 Pro</span> — <span class="d">2× Cortex-A715 @ 2.8 GHz + 6× Cortex-A510 @ 2.0 GHz, with dotprod + i8mm + SVE2. The fixed reality every layer above must adapt to.</span></div>
       </div>
     </div>
-    <p>Alongside the stack, three support components that never ship in the app but produce all the evidence:</p>
+    <p class="dim">Alongside the stack: three support components that never ship in the app but produce all the evidence.</p>
     <div class="tree">
 <span class="dir">armcreate/</span><br>
-├── <span class="dir">app/</span>              <span class="cm">← the React Native app (Week 2+)</span><br>
+├── <span class="dir">app/</span>              <span class="cm">← the React Native app (next phase)</span><br>
 ├── <span class="dir">harness/</span>          <span class="cm">← bench.py — pushes builds+model to the phone, times them, saves JSON</span><br>
 ├── <span class="dir">models/</span>           <span class="cm">← the .gguf compressed models (Q4_0 · Q4_K_M · Q8_0), ~0.7–1.3 GB each</span><br>
 ├── <span class="dir">results/</span>          <span class="cm">← raw measurement JSON — the evidence behind every published number</span><br>
@@ -247,7 +260,7 @@
 <section id="components" class="reveal">
   <div class="wrap">
     <header>
-      <div class="eyebrow">3 · Components</div>
+      <div class="label a">SECTION 03 · COMPONENTS</div>
       <h2>What's used, and why each was chosen</h2>
     </header>
     <div class="table-scroll">
@@ -255,11 +268,11 @@
         <thead><tr><th>Component</th><th>What it is</th><th>Why this one</th></tr></thead>
         <tbody>
           <tr><td class="name">llama.cpp</td><td>C++ inference engine for GGUF models</td><td class="why">Industry standard for CPU inference; builds anywhere; exposes every knob we need to test (arch flags, KleidiAI, repack, threads).</td></tr>
-          <tr><td class="name">React Native + TypeScript</td><td>Cross-platform app framework</td><td class="why">The builder writes only TypeScript and Python. RN keeps 100% of authored code in TS; proven viable for this exact use by PocketPal (500K+ installs on the same stack).</td></tr>
+          <tr><td class="name">React Native + TypeScript</td><td>Cross-platform app framework</td><td class="why">The builder writes only TypeScript and Python. RN keeps 100% of authored code in TS; proven viable for this exact use by PocketPal (500K+ installs, same stack).</td></tr>
           <tr><td class="name">llama.rn</td><td>React Native bindings for llama.cpp</td><td class="why">Lets the TS app call the C++ engine without writing native code. Its prebuilt binaries' build flags are an active research question — possibly the project's biggest finding.</td></tr>
           <tr><td class="name">Android NDK + CMake</td><td>Cross-compiler toolchain</td><td class="why">Builds arm64 phone binaries on an x86 Windows laptop. The NDK is the official way; CMake drives llama.cpp's build. No Mac, no emulator.</td></tr>
           <tr><td class="name">adb</td><td>USB command line to the phone</td><td class="why">Push binaries, run benchmarks, read CPU features and battery state — scriptable, reproducible, no app install needed for the harness.</td></tr>
-          <tr><td class="name">harness/bench.py (Python)</td><td>The measurement scientist</td><td class="why">Enforces rigor automatically: 5 repetitions, cooldowns between variants, battery/thermal logging, raw JSON output. Anyone can rerun every number with one command.</td></tr>
+          <tr><td class="name">harness/bench.py</td><td>The measurement scientist (Python)</td><td class="why">Enforces rigor automatically: 5 repetitions, cooldowns between variants, battery/thermal logging, raw JSON output. Anyone reruns every number with one command.</td></tr>
           <tr><td class="name">GGUF models (bartowski)</td><td>Pre-quantized Llama 3.2 1B</td><td class="why">Small enough to iterate fast (0.7–1.3 GB), permissively licensed, available in the exact quant formats the sweep compares.</td></tr>
           <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included <em>as a lever under test</em>, not an assumption. Verdict on this SoC: neutral for Q4_0 — kept in the sweep because it may matter on other quants and SME2 silicon.</td></tr>
         </tbody>
@@ -271,26 +284,27 @@
 <section id="method" class="reveal">
   <div class="wrap">
     <header>
-      <div class="eyebrow">4 · Method</div>
+      <div class="label a">SECTION 04 · METHOD</div>
       <h2>Seven builds, one variable at a time</h2>
     </header>
-    <p>You can't attribute a speedup unless exactly one thing changes between measurements. So llama.cpp is compiled seven ways, and consecutive comparisons isolate each lever:</p>
+    <p class="dim">You can't attribute a speedup unless exactly one thing changes between measurements. So llama.cpp is compiled seven ways, and consecutive comparisons isolate each lever:</p>
     <div class="table-scroll">
       <table>
         <thead><tr><th>Build variant</th><th>-march flags</th><th>KleidiAI</th><th>Repack</th><th>Question it answers</th></tr></thead>
         <tbody>
-          <tr><td class="mono">generic</td><td class="mono">none</td><td><span class="flag off">off</span></td><td><span class="flag on">on</span></td><td class="why">What do you get if you don't think about any of this? (The default.)</td></tr>
-          <tr><td class="mono">arch</td><td class="mono">+i8mm+dotprod</td><td><span class="flag off">off</span></td><td><span class="flag on">on</span></td><td class="why">What are the compiler flags alone worth?</td></tr>
-          <tr><td class="mono">kleidiai</td><td class="mono">+i8mm+dotprod</td><td><span class="flag on">on</span></td><td><span class="flag on">on</span></td><td class="why">Does Arm's library add anything on top?</td></tr>
-          <tr><td class="mono">arch-norepack</td><td class="mono">+i8mm+dotprod</td><td><span class="flag off">off</span></td><td><span class="flag off">off</span></td><td class="why">Baseline with llama.cpp's own weight-repacking disabled.</td></tr>
-          <tr><td class="mono">kleidiai-norepack</td><td class="mono">+i8mm+dotprod</td><td><span class="flag on">on</span></td><td><span class="flag off">off</span></td><td class="why">KleidiAI's true standalone value, unmasked by repack.</td></tr>
-          <tr><td class="mono">dp-arch</td><td class="mono">+dotprod only</td><td><span class="flag off">off</span></td><td><span class="flag on">on</span></td><td class="why">Target for phones without i8mm (built, unused since going 2a-only).</td></tr>
-          <tr><td class="mono">dp-kleidiai</td><td class="mono">+dotprod only</td><td><span class="flag on">on</span></td><td><span class="flag on">on</span></td><td class="why">Same, with KleidiAI.</td></tr>
+          <tr><td class="mono">generic</td><td class="mono">none</td><td><span class="flag off">OFF</span></td><td><span class="flag on">ON</span></td><td class="why">What do you get if you don't think about any of this? (The default.)</td></tr>
+          <tr><td class="mono">arch</td><td class="mono">+i8mm+dotprod</td><td><span class="flag off">OFF</span></td><td><span class="flag on">ON</span></td><td class="why">What are the compiler flags alone worth?</td></tr>
+          <tr><td class="mono">kleidiai</td><td class="mono">+i8mm+dotprod</td><td><span class="flag on">ON</span></td><td><span class="flag on">ON</span></td><td class="why">Does Arm's library add anything on top?</td></tr>
+          <tr><td class="mono">arch-norepack</td><td class="mono">+i8mm+dotprod</td><td><span class="flag off">OFF</span></td><td><span class="flag off">OFF</span></td><td class="why">Baseline with llama.cpp's own weight-repacking disabled.</td></tr>
+          <tr><td class="mono">kleidiai-norepack</td><td class="mono">+i8mm+dotprod</td><td><span class="flag on">ON</span></td><td><span class="flag off">OFF</span></td><td class="why">KleidiAI's true standalone value, unmasked by repack.</td></tr>
+          <tr><td class="mono">dp-arch</td><td class="mono">+dotprod only</td><td><span class="flag off">OFF</span></td><td><span class="flag on">ON</span></td><td class="why">Target for phones without i8mm (built; unused since going 2a-only).</td></tr>
+          <tr><td class="mono">dp-kleidiai</td><td class="mono">+dotprod only</td><td><span class="flag on">ON</span></td><td><span class="flag on">ON</span></td><td class="why">Same, with KleidiAI.</td></tr>
         </tbody>
       </table>
     </div>
     <div class="callout">
-      <p><strong>Measurement rules (non-negotiable):</strong> physical phone only, never an emulator · 5 repetitions per config · fixed workloads (128-token prefill, 64-token decode) · 90–120&nbsp;s cooldowns between variants so heat from one run can't slow the next · battery level and temperature logged before and after every variant · raw JSON committed to <code>results/</code> so every published number is auditable.</p>
+      <span class="t">MEASUREMENT RULES — NON-NEGOTIABLE</span>
+      <p>Physical phone only, never an emulator · 5 repetitions per config · fixed workloads (128-token prefill, 64-token decode) · 90–120&nbsp;s cooldowns between variants so heat from one run can't slow the next · battery level and temperature logged before and after every variant · raw JSON committed to <code>results/</code> so every published number is auditable.</p>
     </div>
   </div>
 </section>
@@ -298,7 +312,7 @@
 <section id="findings" class="reveal">
   <div class="wrap">
     <header>
-      <div class="eyebrow">5 · Findings so far</div>
+      <div class="label a">SECTION 05 · FINDINGS SO FAR</div>
       <h2>What the phone actually said</h2>
     </header>
     <div class="table-scroll">
@@ -313,19 +327,20 @@
         </tbody>
       </table>
     </div>
-    <p>Plus the thread-count result: decode at 2 threads (<strong>17.3 tok/s</strong>, pinned by the scheduler to the two fast A715 cores) beats 6 threads (<strong>13.8</strong>). More parallelism is <em>worse</em> when the extra workers are slow cores.</p>
+    <p class="dim">Plus the thread-count result: decode at 2 threads (<strong>17.3 tok/s</strong>, landing on the two fast A715 cores) beats 6 threads (<strong>13.8</strong>). More parallelism is <em>worse</em> when the extra workers are slow cores.</p>
     <div class="callout">
-      <p><strong>Honest caveats:</strong> single-session runs with ~5–8% thermal variance — error bars need more repetitions before these claims go in a submission. All numbers are one SoC (Dimensity 7200 Pro), one model (Llama 3.2 1B), one quant family so far. "KleidiAI adds nothing" means <em>on this hardware, for this format</em> — on SME2 silicon or other quants the answer may flip, which is exactly why the product measures instead of assuming.</p>
+      <span class="t">HONEST CAVEATS</span>
+      <p>Single-session runs with ~5–8% thermal variance — error bars need more repetitions before these claims go in a submission. All numbers are one SoC (Dimensity 7200 Pro), one model (Llama 3.2 1B), one quant family so far. "KleidiAI adds nothing" means <em>on this hardware, for this format</em> — on SME2 silicon or other quants the answer may flip, which is exactly why the product measures instead of assuming.</p>
     </div>
-    <p>Next experiments: the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0 — downloaded, queued), energy per token via the battery sensor, big.LITTLE speculative decoding, and the llama.rn prebuilt-binary audit.</p>
+    <p class="dim">Next experiments: the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0 — downloaded, queued) · energy per token via the battery sensor · big.LITTLE speculative decoding · the llama.rn prebuilt-binary audit.</p>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div><strong>PocketTune</strong> · Arm Create : AI Optimization Challenge 2026 · Mobile AI Track</div>
-    <div>Open source (MIT) · all measurements: Nothing Phone 2a, MediaTek Dimensity 7200 Pro · raw data in <code>results/</code></div>
-    <div><a href="index.html">← Back to the landing page</a> · <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge page</a></div>
+    <div class="sig">POCKETTUNE · ARM CREATE : AI OPTIMIZATION CHALLENGE 2026 · MOBILE AI TRACK</div>
+    <div>Open source (MIT) · all measurements: Nothing Phone 2a — MediaTek Dimensity 7200 Pro · raw data in <code>results/</code></div>
+    <div><a href="index.html">[ ← Back to the landing page ]</a> · <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge page</a></div>
   </div>
 </footer>
 
