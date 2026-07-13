@@ -1,4 +1,4 @@
-# PocketTune
+<img src="site/public/logo.png" alt="Image" width="100%" />
 
 **The fastest local-LLM setup for *your* phone — found and applied in one tap.**
 
