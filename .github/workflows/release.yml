@@ -42,9 +42,15 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install Android NDK 27.1.12297006
+      - name: Install Android SDK packages
         working-directory: .
-        run: sdkmanager --install "ndk;27.1.12297006"
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" --install \
+            "ndk;27.1.12297006" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
