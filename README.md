@@ -21,7 +21,9 @@ On the first device through the harness (**Nothing Phone 2a**, MediaTek Dimensit
 Armv9 chip *with* `i8mm`): **4.94× faster prompt processing** — same phone, same Llama 3.2 1B Q4_0
 model, same llama.cpp source — purely from Arm-aware build flags (`armv8.2-a+dotprod+i8mm`) and
 llama.cpp's Q4_0 repack into i8mm-friendly layouts (20.5 → 101.4 prefill t/s). Decode improves
-1.34× (12.7 → 17.0 t/s). Raw data: [results/](results/).
+1.34× (12.7 → 17.0 t/s). 
+
+Raw data: [results/](results/).
 
 The *size* of that gain is a property of the silicon, not of PocketTune: a chip without `i8mm` has
 a different ceiling and a different best config. So the app doesn't ship this result — it ships the
