@@ -288,15 +288,17 @@ export function ChatScreen({ theme }: { theme: Theme }) {
             )}
           </Row>
         </Row>
-        <Row style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-          {model && <Chip theme={theme} label={`${model.name} ${model.quant}`} tone="accent" />}
-          {appliedConfig ? (
-            <Chip theme={theme} label={`Tuned · ${configLabel(appliedConfig)}`} tone="good" />
-          ) : (
-            <Chip theme={theme} label="Untuned defaults" tone="off" />
-          )}
-          {engineStatus === 'loading' && <Chip theme={theme} label="Loading model…" />}
-        </Row>
+        {modelReady && (
+          <Row style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            {model && <Chip theme={theme} label={`${model.name} ${model.quant}`} tone="accent" />}
+            {appliedConfig ? (
+              <Chip theme={theme} label={`Tuned · ${configLabel(appliedConfig)}`} tone="good" />
+            ) : (
+              <Chip theme={theme} label="Untuned defaults" tone="off" />
+            )}
+            {engineStatus === 'loading' && <Chip theme={theme} label="Loading model…" />}
+          </Row>
+        )}
         {tpsSeries.length >= 2 && (
           <View style={{ marginTop: spacing.s }}>
             <Sparkline theme={theme} values={tpsSeries} unit="t/s" />

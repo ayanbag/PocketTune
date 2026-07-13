@@ -17,7 +17,7 @@ import { DeviceScreen } from './src/screens/DeviceScreen';
 import { ModelsScreen } from './src/screens/ModelsScreen';
 import { TuneScreen } from './src/screens/TuneScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
-import { LabScreen } from './src/screens/LabScreen';
+import { LabScreen, hasPublishedEvidence } from './src/screens/LabScreen';
 
 const TABS: { id: TabId; label: string; Icon: typeof ChipIcon }[] = [
   { id: 'device', label: 'Device', Icon: ChipIcon },
@@ -93,11 +93,13 @@ function Root() {
         {TABS.map(({ id, label, Icon }) => {
           const active = tab === id;
           const busy = id === 'tune' && tuneRunning;
+          const disabled = id === 'lab' && !hasPublishedEvidence;
           return (
             <Pressable
               key={id}
+              disabled={disabled}
               onPress={() => setTab(id)}
-              style={styles.tabItem}
+              style={[styles.tabItem, disabled && { opacity: 0.35 }]}
               android_ripple={{ color: theme.fill, borderless: true }}>
               <Icon color={active ? theme.accent : theme.inkMuted} size={23} />
               <Text

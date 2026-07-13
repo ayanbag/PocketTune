@@ -90,6 +90,13 @@ const ladderRuns = runs
 
 type LadderRun = (typeof ladderRuns)[number];
 
+/**
+ * Whether the bundled evidence contains at least one publishable attribution
+ * ladder. When it doesn't (empty/failed evidence.json), the Lab tab has
+ * nothing measured to stand on and the tab bar disables it.
+ */
+export const hasPublishedEvidence = ladderRuns.length > 0;
+
 function genericPeak(r: LadderRun): number {
   return peak(r.ladder[0], 'pp128');
 }
