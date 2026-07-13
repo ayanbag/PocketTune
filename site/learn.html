@@ -158,6 +158,32 @@
   .pill.on { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
   .pill.off { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
 
+  /* ladder carousel — one slide per benchmarked phone (mirrors the device carousel on index.html) */
+  .carousel { display: flex; flex-direction: column; gap: 18px; }
+  .lad-track {
+    display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory;
+    scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .lad-track::-webkit-scrollbar { display: none; }
+  .lad-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; display: flex; flex-direction: column; gap: 14px; }
+  .lad-title { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .lad-title .mono { font-family: var(--mono); font-size: 15px; letter-spacing: 0; }
+  .lad-title .tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 980px; margin-left: 8px; vertical-align: middle; }
+  .lad-title .tag.on { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+  .lad-title .tag.off { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+  .carousel-bar { display: flex; align-items: center; gap: 14px; }
+  .dots { display: flex; gap: 8px; margin-right: auto; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--hair); transition: background .25s ease, transform .25s ease; }
+  .dot[aria-current="true"] { background: var(--blue); transform: scale(1.25); }
+  .arrow {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--hair);
+    background: var(--card); color: var(--ink); font-size: 17px; line-height: 1; cursor: pointer;
+    display: grid; place-items: center; transition: background .2s ease, border-color .2s ease, opacity .2s ease;
+  }
+  .band.grey .arrow { background: var(--bg); }
+  .arrow:hover:not(:disabled) { border-color: var(--link); color: var(--link); }
+  .arrow:disabled { opacity: .35; cursor: default; }
+
   .callout { background: var(--card); border-radius: var(--radius-lg); padding: 28px 30px; }
   .band.grey .callout { background: var(--bg); }
   .callout .t { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 8px; }
@@ -239,7 +265,7 @@
       </div>
       <div class="g-card fade">
         <span class="k">The -march flag</span>
-        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=…+i8mm+dotprod</code> is permission to emit them. On the chip we've benchmarked so far it was worth <b>4.94×</b> on prefill. The right flags are the ones matching <i>that</i> phone's feature list — which is why they're chosen after detection, not baked in.</p>
+        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=…+i8mm+dotprod</code> is permission to emit them. On the two phones benchmarked it was worth <b>4.94×</b> and <b>3.88×</b> on prefill — the same flag, two different ceilings, because one chip has i8mm and the other doesn't. The right flags are the ones matching <i>that</i> phone's feature list — which is why they're chosen after detection, not baked in.</p>
       </div>
       <div class="g-card fade">
         <span class="k">big.LITTLE cores</span>
@@ -247,7 +273,7 @@
       </div>
       <div class="g-card fade">
         <span class="k">KleidiAI</span>
-        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. On the i8mm chip measured so far, for Q4_0: <b>no measurable gain</b> once the compiler flags are right, because plain compiled i8mm code already saturates that hardware. On SME2 silicon or a different quant the verdict could invert — so it stays a lever under test, per device.</p>
+        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. On <b>both</b> phones measured, for Q4_0: <b>no measurable gain</b> once the compiler flags are right, because plain compiled code already saturates that hardware — true on the i8mm chip and on the dotprod-only one alike. On SME2 silicon or a different quant the verdict could invert — so it stays a lever under test, per device.</p>
       </div>
       <div class="g-card fade">
         <span class="k">llama.cpp and llama-bench</span>
@@ -390,7 +416,7 @@
           <tr><td class="name">adb</td><td>USB command line to the phone</td><td class="why">Push binaries, run benchmarks, read CPU features and battery state — scriptable and reproducible, with no app install needed.</td></tr>
           <tr><td class="name">harness/bench.py</td><td>The measurement scientist</td><td class="why">Enforces rigour automatically: five repetitions, cooldowns between variants, battery and thermal logging, raw JSON out. Anyone reruns every number with one command.</td></tr>
           <tr><td class="name">GGUF models</td><td>Pre-quantized Llama 3.2 1B</td><td class="why">Small enough to iterate quickly, permissively licensed, and available in the exact quant formats the sweep compares.</td></tr>
-          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict on the silicon measured so far: neutral for Q4_0 — kept in the sweep because it may matter on other quants and on SME2 chips.</td></tr>
+          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict on both phones measured: neutral for Q4_0 — kept in the sweep because it may matter on other quants and on SME2 chips.</td></tr>
         </tbody>
       </table>
     </div>
@@ -459,26 +485,61 @@
     <div class="center stack fade">
       <div class="kicker">Chapter seven</div>
       <h2>What the silicon<br>actually said.</h2>
-      <p class="lead">Results are per device. This is the one device through the harness so far — an i8mm-capable Armv9 chip (MediaTek Dimensity 7200 Pro, in a Nothing Phone 2a). A chip without i8mm will tell a different story, and gets its own table when it is actually measured — not before.</p>
+      <p class="lead">Results are per device — so here are both devices. The first has <code>i8mm</code>; the second does not. We said a chip without i8mm would tell a different story and would get its own table only once it was actually measured. It has been, and it does.</p>
     </div>
-    <div class="table-scroll fade">
-      <table>
-        <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
-        <tbody>
-          <tr><td class="mono">generic</td><td>20.51</td><td>12.73</td><td class="why">The default everyone ships. Slow.</td></tr>
-          <tr><td class="mono">arch</td><td><strong>101.43</strong></td><td><strong>17.00</strong></td><td class="why"><strong>4.94× / 1.34×</strong> — the compiler flag is the whole gain.</td></tr>
-          <tr><td class="mono">kleidiai</td><td>100.09</td><td>15.61</td><td class="why">Within noise of <code>arch</code>. No added value here.</td></tr>
-          <tr><td class="mono">arch-norepack</td><td>103.90</td><td>17.33</td><td class="why">Even repack adds nothing once i8mm is on.</td></tr>
-          <tr><td class="mono">kleidiai-norepack</td><td>98.09</td><td>16.76</td><td class="why">KleidiAI ≈ plain i8mm code. Tested four ways.</td></tr>
-        </tbody>
-      </table>
+
+    <!-- one slide per benchmarked phone. No .fade on a slide: an off-screen slide never
+         intersects the viewport and would stay invisible — the carousel wrapper fades instead. -->
+    <div class="carousel fade">
+      <div class="lad-track" id="lad-track">
+
+        <div class="lad-slide">
+          <h3 class="lad-title">Nothing Phone 2a · Dimensity 7200 Pro<span class="tag on">i8mm present</span></h3>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">generic</td><td>20.51</td><td>12.73</td><td class="why">The default everyone ships. Slow.</td></tr>
+                <tr><td class="mono">arch</td><td><strong>101.43</strong></td><td><strong>17.00</strong></td><td class="why"><strong>4.94× / 1.34×</strong> — the compiler flag is the whole gain.</td></tr>
+                <tr><td class="mono">kleidiai</td><td>100.09</td><td>15.61</td><td class="why">Within noise of <code>arch</code>. No added value here.</td></tr>
+                <tr><td class="mono">arch-norepack</td><td>103.90</td><td>17.33</td><td class="why">Even repack adds nothing once i8mm is on.</td></tr>
+                <tr><td class="mono">kleidiai-norepack</td><td>98.09</td><td>16.76</td><td class="why">KleidiAI ≈ plain i8mm code. Tested four ways.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lad-slide">
+          <h3 class="lad-title">Samsung Galaxy A34 5G · Dimensity 1080<span class="tag off">no i8mm — dotprod only</span></h3>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">generic</td><td>18.50</td><td>12.00</td><td class="why">Same slow default. Roughly where phone one started.</td></tr>
+                <tr><td class="mono">dp-arch</td><td><strong>71.73</strong></td><td><strong>17.34</strong></td><td class="why"><strong>3.88× / 1.44×</strong> — same lever, <em>lower ceiling</em>. No matrix instructions to unlock.</td></tr>
+                <tr><td class="mono">dp-kleidiai</td><td>71.75</td><td>17.76</td><td class="why">Flat again (+0.03% prefill). The negative result is now two-for-two.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="carousel-bar">
+        <div class="dots" id="lad-dots"></div>
+        <button class="arrow" id="lad-prev" type="button" aria-label="Previous phone">‹</button>
+        <button class="arrow" id="lad-next" type="button" aria-label="Next phone">›</button>
+      </div>
     </div>
-    <p class="body-2 fade">And the thread-count result: decode at 2 threads reaches <strong>17.3 tok/s</strong> — landing on the two big cores — while 6 threads manages only <strong>13.8</strong>. More parallelism is <em>worse</em> when the extra workers are little cores. The best thread count is therefore a function of the core layout, which is a function of the phone.</p>
+
+    <p class="body-2 fade">Flip between the two and the thesis is right there. The <em>same</em> compiler flag is worth <strong>4.94×</strong> on one phone and <strong>3.88×</strong> on the other, because one chip has matrix-multiply instructions and the other only has dot-product ones. Ship the 2a's config to an A34 and you are leaving performance on the table; ship a generic build to either and you are leaving a factor of four on the table. Neither number was predictable from the spec sheet alone — both had to be measured.</p>
+
+    <p class="body-2 fade">And the thread-count result, which is sharper on the second phone: on the A34, the generic build decodes fastest at <strong>6 threads</strong> (12.0 tok/s), but once the arch flags are on, 6 threads becomes the <em>worst</em> choice (12.8) and <strong>2 threads</strong> — just the two big A78 cores — wins at <strong>17.3</strong>. The optimal thread count <em>flipped when the build changed</em>. More parallelism is worse when the extra workers are little cores. No static default survives that.</p>
+
     <div class="callout fade">
       <span class="t">Honest caveats</span>
-      <p>These are single-session runs with roughly 5–8% thermal variance; proper error bars need more repetitions before the claims go into a submission. And this is <strong>one chip, one model, one quant family</strong> — a sample of one. "KleidiAI adds nothing" means <em>on this hardware, for this format</em>; on SME2 silicon, on a dotprod-only chip, or with other quants the answer may flip. Nothing here is presented as a law of Arm phones. Which is precisely why the product ships a measurement loop instead of a lookup table — and why every additional device we test gets published, including the ones that disagree.</p>
+      <p>These are single-session runs with roughly 5–8% thermal variance; proper error bars need more repetitions before the claims go into a submission. Two phones is better than one, but it is still <strong>two chips, one model, one quant family</strong> — and both happen to be MediaTek. "KleidiAI adds nothing" means <em>on this hardware, for this format</em>; on SME2 silicon or with other quants the answer may flip, and we would publish that too. Nothing here is presented as a law of Arm phones. Which is precisely why the product ships a measurement loop instead of a lookup table — and why every device we test gets published, including the ones that disagree.</p>
     </div>
-    <p class="body-2 fade">Next: more devices through the same harness — each one's ladder published beside this one, whatever it says — plus the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0), energy per token via the battery sensor, and big.LITTLE speculative decoding. The llama.rn binary audit is done — its prebuilts carry the fast kernels and dispatch by feature, which is why the app can tune runtime levers instead of recompiling.</p>
+    <p class="body-2 fade">Next: more devices through the same harness — each one's ladder published beside these, whatever it says — plus the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0), energy per token via the battery sensor, and big.LITTLE speculative decoding. The llama.rn binary audit is done — its prebuilts carry the fast kernels and dispatch by feature, which is why the app can tune runtime levers instead of recompiling.</p>
   </div>
 </section>
 
@@ -519,6 +580,51 @@
     fades.forEach(function (el) { io.observe(el); });
   } else {
     fades.forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ladder carousel — one slide per benchmarked phone */
+  var track = document.getElementById("lad-track");
+  if (track) {
+    var slides = track.children,
+        n = slides.length,
+        dotbox = document.getElementById("lad-dots"),
+        prev = document.getElementById("lad-prev"),
+        next = document.getElementById("lad-next"),
+        at = 0;
+
+    for (var i = 0; i < n; i++) {
+      (function (idx) {
+        var b = document.createElement("button");
+        b.className = "dot";
+        b.type = "button";
+        var title = slides[idx].querySelector(".lad-title");
+        b.setAttribute("aria-label", title ? title.textContent : "Phone " + (idx + 1));
+        b.addEventListener("click", function () { go(idx); });
+        dotbox.appendChild(b);
+      })(i);
+    }
+
+    function go(i) {
+      at = Math.max(0, Math.min(n - 1, i));
+      track.scrollTo({ left: slides[at].offsetLeft - track.offsetLeft, behavior: reduced ? "auto" : "smooth" });
+      sync();
+    }
+    function sync() {
+      Array.prototype.forEach.call(dotbox.children, function (d, i) {
+        d.setAttribute("aria-current", i === at ? "true" : "false");
+      });
+      prev.disabled = at === 0;
+      next.disabled = at === n - 1;
+    }
+    prev.addEventListener("click", function () { go(at - 1); });
+    next.addEventListener("click", function () { go(at + 1); });
+    /* keep the dots honest when the track is swiped directly */
+    track.addEventListener("scroll", function () {
+      var w = track.clientWidth || 1;
+      var idx = Math.round(track.scrollLeft / w);
+      if (idx !== at) { at = idx; sync(); }
+    });
+    sync();
   }
 })();
 </script>

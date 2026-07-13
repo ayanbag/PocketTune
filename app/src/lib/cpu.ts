@@ -38,8 +38,13 @@ const ARM_PARTS: Record<string, string> = {
 /** Marketing names for devices we can't derive a SoC string for. */
 const KNOWN_DEVICES: Record<string, { name: string; soc: string }> = {
   A142: { name: 'Nothing Phone (2a)', soc: 'MediaTek Dimensity 7200 Pro' },
-  'Pixel 7a': { name: 'Google Pixel 7a', soc: 'Google Tensor G2' },
+  'SM-A346E': { name: 'Samsung Galaxy A34 5G', soc: 'MediaTek Dimensity 1080' },
 };
+
+/** Marketing name for a Platform model code, when we know it. */
+export function knownDeviceName(model: string): string | null {
+  return KNOWN_DEVICES[model]?.name ?? null;
+}
 
 async function readFileSafe(path: string): Promise<string | null> {
   try {

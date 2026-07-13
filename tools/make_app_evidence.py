@@ -46,7 +46,7 @@ VARIANT_INFO = {
     },
     "dp-arch": {
         "label": "Arch (dotprod only)",
-        "detail": "armv8.2-a + dotprod, the non-i8mm path (Pixel 7a)",
+        "detail": "armv8.2-a + dotprod, the non-i8mm path (Galaxy A34)",
     },
     "dp-kleidiai": {
         "label": "KleidiAI (dotprod)",

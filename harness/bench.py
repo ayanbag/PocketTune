@@ -37,7 +37,7 @@ DEVICE_DIR = "/data/local/tmp/pockettune"
 #   kleidiai         arch flags + KleidiAI microkernels
 #   arch-norepack    arch flags, llama.cpp's Q4_0 repack disabled
 #   kleidiai-norepack  arch flags + KleidiAI, repack disabled  → KleidiAI's true standalone value
-#   dp-arch          -march=armv8.2a+dotprod  (NO i8mm — the Pixel 7a target)
+#   dp-arch          -march=armv8.2a+dotprod  (NO i8mm — the Galaxy A34 target)
 #   dp-kleidiai      dotprod-only + KleidiAI
 BUILDS = {
     "generic":           "build-android-base",

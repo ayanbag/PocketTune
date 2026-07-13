@@ -155,9 +155,13 @@
     mask-image: radial-gradient(120% 80% at 50% 30%, rgba(0,0,0,.95), transparent 76%); }
 
   /* big stat row */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 40px 20px; width: 100%; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px 20px; width: 100%; }
   .stat { text-align: center; }
-  .stat .v { font-family: var(--display); font-weight: 600; font-size: clamp(44px, 5.6vw, 64px); line-height: 1.05; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  /* one fixed line box for every stat, so a two-number range and a one-digit
+     stat stay on the same line and their labels start at the same height */
+  .stat .v { height: clamp(52px, 6.4vw, 72px); line-height: clamp(52px, 6.4vw, 72px); white-space: nowrap;
+    font-family: var(--display); font-weight: 600; font-size: clamp(44px, 5.6vw, 64px); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .stat .v.range { font-size: clamp(28px, 3.5vw, 42px); }
   .stat .v small { font-size: .5em; font-weight: 600; }
   .stat .l { font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.33; }
   .stat .t { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
@@ -425,12 +429,13 @@
 <section class="band grey">
   <div class="col">
     <div class="stats">
-      <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="4.94" data-dec="2">0</span><small>×</small></div><div class="l">faster at reading your prompt</div></div>
-      <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="1.34" data-dec="2">0</span><small>×</small></div><div class="l">faster at writing the answer</div></div>
+      <!-- the two speed stats are ranges across every measured device — filled from DEVICES below -->
+      <div class="stat fade"><div class="t">Measured</div><div class="v" id="stat-pp"></div><div class="l">faster at reading your prompt</div></div>
+      <div class="stat fade"><div class="t">Measured</div><div class="v" id="stat-tg"></div><div class="l">faster at writing the answer</div></div>
       <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
       <div class="stat fade"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls. Nothing leaves the phone.</div></div>
     </div>
-    <p class="small center fade stats-note">Speed figures are the best result on the fastest device benchmarked so far, against that same device's unoptimized baseline. Every number below is labelled with the phone that produced it — <a href="#evidence">see the per-device evidence ›</a></p>
+    <p class="small center fade stats-note">These are the speed ranges across <b id="stat-n"></b>, each one measured against its own unoptimized baseline. The spread <em>is</em> the finding: the same optimization is worth a different amount on different silicon, so no single number describes your phone. <a href="#evidence">See the per-device evidence ›</a></p>
   </div>
 </section>
 
@@ -454,9 +459,9 @@
     </div>
     <div class="cards">
       <div class="card fade">
-        <div class="num">4.94<small>×</small></div>
+        <div class="num">3.9–4.9<small>×</small></div>
         <h3>The compiler flag is the whole ballgame.</h3>
-        <p>One build flag nearly quintuples prompt processing — it lets the compiler emit the matrix instructions the chip already has. Most Android builds never pass it. How much it buys depends on which instructions your silicon actually implements.</p>
+        <p>One build flag multiplies prompt processing on every phone we've run — it lets the compiler emit the matrix instructions the chip already has. Most Android builds never pass it. <em>How much</em> it buys is the part that moves: 4.94× where i8mm exists, 3.88× where only dotprod does.</p>
       </div>
       <div class="card fade">
         <div class="num">+0<small>%</small></div>
@@ -466,7 +471,7 @@
       <div class="card fade">
         <div class="num">2 &gt; 6</div>
         <h3>Fewer threads, faster answers.</h3>
-        <p>Decode at 2 threads: 17.3 tok/s. At 6 threads: 13.8. The fast cores beat fast-plus-slow — the little cores become the bottleneck everyone waits for. Where the fast cores sit, and how many there are, is per phone.</p>
+        <p>Both phones decode fastest on 2 threads, not 6 — on the 2a that's 17.3 tok/s against 13.8. The fast cores beat fast-plus-slow: the little cores become the bottleneck everyone waits for. Where the fast cores sit, and how many there are, is per phone.</p>
       </div>
     </div>
     <p class="body-2 center fade narrow-60">Every one contradicts what a reasonable developer would assume — and none of them generalizes across chips by default. That's the point: <strong>your phone's fastest configuration is an empirical question, so PocketTune answers it on your phone.</strong></p>
@@ -563,7 +568,7 @@
         <div class="opt-kind">SIMD · instruction set<span class="when">Build-time</span></div>
         <div class="opt-body"><h3>Arch-targeted compilation</h3>
         <p><code>-march=armv8.2-a+dotprod+i8mm</code> gives the compiler permission to emit the chip's matrix-multiply instructions. Generic arm64 builds — what most apps ship — use none of them. This single flag is the largest gain in the entire project.</p></div>
-        <div class="opt-result"><div class="v win">4.94×</div><div class="d">prefill vs generic build · measured, Nothing Phone 2a</div></div>
+        <div class="opt-result"><div class="v win">4.94×</div><div class="d">prefill vs generic build · Nothing Phone 2a. The same flags buy 3.88× on the dotprod-only Galaxy A34 — same lever, different silicon, different ceiling</div></div>
       </div>
       <div class="opt-row">
         <div class="opt-kind">Data layout<span class="when">Load-time</span></div>
@@ -574,8 +579,8 @@
       <div class="opt-row">
         <div class="opt-kind">Kernel library<span class="when">Build-time</span></div>
         <div class="opt-body"><h3>KleidiAI microkernels</h3>
-        <p>Arm's hand-written matmul routines — the thing everyone assumes brings the speed. Tested four ways on an i8mm chip: once the compiler flags are right, plain compiled code already saturates the hardware for Q4_0. It stays in the sweep because other silicon may disagree.</p></div>
-        <div class="opt-result"><div class="v">≈0%</div><div class="d">for Q4_0 on the chip tested · the honest negative</div></div>
+        <p>Arm's hand-written matmul routines — the thing everyone assumes brings the speed. Tested four ways on the i8mm chip and again on a dotprod-only one: once the compiler flags are right, plain compiled code already saturates the hardware for Q4_0. It stays in the sweep because other silicon and other quantizations may disagree.</p></div>
+        <div class="opt-result"><div class="v">≈0%</div><div class="d">for Q4_0 on both phones tested · the honest negative</div></div>
       </div>
       <div class="opt-row">
         <div class="opt-kind">Quantization<span class="when">Model format</span></div>
@@ -602,7 +607,7 @@
         <div class="opt-result"><div class="v">per config</div><div class="d">sampled live during each sweep point</div></div>
       </div>
     </div>
-    <p class="small center fade stats-note">Measured numbers are from the Nothing Phone 2a — the only device through the harness so far — and trace to raw JSON in <code>results/</code>. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
+    <p class="small center fade stats-note">Measured numbers come from the two phones that have actually been through the harness — one with <code>i8mm</code>, one with only <code>dotprod</code> — and trace to raw JSON in <code>results/</code>. They disagree by design: the same compiler flags buy 4.94× on one and 3.88× on the other. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
   </div>
 </section>
 
@@ -648,12 +653,17 @@
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ───────────────────────────────────────────────────────────────────────────
-     DEVICES — the only place a phone is named on this site.
+     DEVICES — the source of every device panel, chip and terminal line here.
      Benchmarked a new phone? Append an object here; the evidence panels, the
      coverage line and the terminal demo all rebuild themselves. Numbers come
-     straight from the matching results/*.json (median of 5 reps).
+     straight from the matching results/*.json (median of 5 reps), at full
+     precision — the speedup labels are computed, so rounding early makes them
+     disagree with the published figures.
      Only phones that actually went through the harness belong in here — an
      unmeasured device gets no panel, no chips, and no claims.
+     A few narrative lines in the "optimizations" section also cite phones by
+     name (the 4.94× / 3.88× comparison); grep for the phone name when a run
+     changes, so the prose can't drift from this array.
      ─────────────────────────────────────────────────────────────────────────── */
   var DEVICES = [
     {
@@ -673,10 +683,54 @@
         { name: "+ KleidiAI", flag: "arch flags + GGML_CPU_KLEIDIAI=ON", pp: 100.085041, ppThreads: 6, tg: 15.610392, tgThreads: 2, vs: 1 }
       ],
       note: "The chip has the i8mm matrix instructions, and the compiler flags are what unlock them. Arm's KleidiAI kernels land within noise of plain compiled code for Q4_0 here — llama.cpp's own repack path already exploits i8mm well."
+    },
+    {
+      status: "measured",
+      soc: "MediaTek Dimensity 1080",
+      phone: "Samsung Galaxy A34 5G",
+      abi: "arm64-v8a",
+      date: "13 July 2026",
+      dotprod: true, i8mm: false, sve2: false,
+      bigCores: [6, 7],
+      cores: "2× Cortex-A78 @ 2.6 GHz + 6× Cortex-A55 @ 2.0 GHz",
+      model: "Llama 3.2 1B · Q4_0",
+      source: "results/sm-a346e-20260713T172211Z.json",
+      builds: [
+        { name: "generic",    flag: "generic arm64-v8a",                 pp: 18.502755, ppThreads: 6, tg: 12.002135, tgThreads: 6 },
+        { name: "arch flags", flag: "-march=armv8.2a+dotprod",           pp: 71.730635, ppThreads: 6, tg: 17.339770, tgThreads: 2, vs: 0 },
+        { name: "+ KleidiAI", flag: "arch flags + GGML_CPU_KLEIDIAI=ON", pp: 71.749669, ppThreads: 6, tg: 17.761667, tgThreads: 2, vs: 1 }
+      ],
+      note: "No i8mm — this chip only has dotprod, so the same compiler flags buy a smaller prefill gain than on the 2a. That lower ceiling is a property of the silicon, and it is exactly why the app measures rather than assumes. KleidiAI is flat here too, which makes the negative result two-for-two."
     }
   ];
 
   var MEASURED = DEVICES.filter(function (d) { return d.status === "measured"; });
+
+  /* ── headline stats: ranges across every measured device, never one phone ──
+     Each device's speedup is its best build over its own generic baseline; the
+     band then shows the min–max of those. A single device collapses to one
+     number, and a third phone widens the range on its own. ── */
+  function speedup(d, key) {
+    var base = d.builds[0][key];
+    return Math.max.apply(null, d.builds.map(function (b) { return b[key]; })) / base;
+  }
+  function rangeStat(el, key) {
+    if (!el || !MEASURED.length) return;
+    var vals = MEASURED.map(function (d) { return speedup(d, key); });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var one = '<span data-count="' + hi.toFixed(2) + '" data-dec="2">0</span>';
+    var isRange = hi - lo >= 0.005;
+    el.classList.toggle("range", isRange);
+    el.innerHTML = (isRange
+      ? '<span data-count="' + lo.toFixed(2) + '" data-dec="2">0</span>–' + one
+      : one) + "<small>×</small>";
+  }
+  rangeStat(document.getElementById("stat-pp"), "pp");
+  rangeStat(document.getElementById("stat-tg"), "tg");
+  var statN = document.getElementById("stat-n");
+  if (statN) statN.textContent = MEASURED.length === 1 ? "the one phone benchmarked so far"
+    : MEASURED.length === 2 ? "both phones benchmarked so far"
+    : "all " + MEASURED.length + " phones benchmarked so far";
 
   /* ── render one attribution ladder per measured device ── */
   var host = document.getElementById("devices");
@@ -759,8 +813,7 @@
           : "") +
       "</div>" +
       '<p class="small coverage fade">Devices benchmarked so far: <b>' + MEASURED.length +
-      "</b>. Run the harness on yours and its JSON becomes the next panel — nothing is published for " +
-      "a phone we haven't actually run.</p>";
+      "</b>.</p>";
 
     if (many) {
       var track = document.getElementById("dev-track"),

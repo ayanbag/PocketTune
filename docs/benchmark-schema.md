@@ -46,7 +46,7 @@ Build variants (each isolates one lever — consecutive comparison attributes th
 | `arch` | `-march=armv8.2-a+dotprod+i8mm` |
 | `kleidiai` | arch flags + `-DGGML_CPU_KLEIDIAI=ON` |
 | `arch-norepack` / `kleidiai-norepack` | as above with llama.cpp's Q4_0 repack disabled |
-| `dp-arch` / `dp-kleidiai` | dotprod-only (no i8mm) — the Pixel 7a target |
+| `dp-arch` / `dp-kleidiai` | dotprod-only (no i8mm) — the Galaxy A34 target |
 
 ## `pockettune.evidence.v1` — app bundle (`app/src/data/evidence.json`)
 

@@ -1,8 +1,8 @@
 # Testing PocketTune on a new phone
 
 How to get PocketTune onto any Android phone and produce numbers you can trust.
-Written from the actual bring-up on a Nothing Phone (2a) — the gotchas below are
-ones we hit, not hypotheticals.
+Written from the actual bring-up on a Nothing Phone (2a) and a Samsung Galaxy
+A34 5G — the gotchas below are ones we hit, not hypotheticals.
 
 Everything here runs from a Windows, macOS, or Linux laptop. You need `adb` on
 PATH (ships with Android SDK platform-tools) and the phone on USB.
@@ -173,13 +173,30 @@ adb shell "for c in /sys/devices/system/cpu/cpu[0-9]*; do \
 ```
 
 The Device tab should agree: same ISA features, same cluster split, big cores at
-the same indices. Don't assume cpu0 is the fastest — on the phone we've measured
-the big cores sit at **cpu6–7**, and getting that backwards silently benchmarks
-the little cores.
+the same indices. Don't assume cpu0 is the fastest — on **both** phones measured
+so far the big cores sit at **cpu6–7**, and getting that backwards silently
+benchmarks the little cores.
 
 If the phone reports **no i8mm**, that's not a failure — it's the interesting
-case. It exercises the dotprod-only dispatch path, and thread placement matters
-even more there. Publish the ladder it produces.
+case, and it's now a measured one. The Galaxy A34 (`dotprod`, no `i8mm`) gets
+**3.88×** prefill from arch flags where the i8mm-capable 2a gets 4.94×: a lower
+ceiling, because there are no matrix-multiply instructions to unlock. Thread
+placement matters more there, not less — on the A34 the best thread count *flips*
+between the generic build (6 threads) and the arch build (2 threads). Publish the
+ladder it produces.
+
+**Pick the ladder that matches the chip.** The `arch` / `kleidiai` builds are
+compiled `-march=armv8.2-a+dotprod+i8mm` and will **SIGILL** on a phone without
+i8mm. Use the `dp-` variants there:
+
+```bash
+# i8mm phone:
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf \
+                        --variants generic arch kleidiai
+# dotprod-only phone:
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf \
+                        --variants generic dp-arch dp-kleidiai
+```
 
 ## 7. Check nothing crashed
 
@@ -215,21 +232,23 @@ uv run tools/make_app_evidence.py
 
 ## 9. Publish the phone's numbers
 
-Nothing about a device is hardcoded in prose — every phone the project talks
-about lives in data, in exactly three places. Adding a phone means editing
-those three, and nothing else.
+Almost nothing about a device is hardcoded in prose — every phone the project
+talks about lives in data, in three places. Adding a phone means editing those
+three, plus a grep pass for the handful of narrative lines that cite a phone by
+name.
 
 **1. The site** — `site/index.html`, the `DEVICES` array at the top of the
 `<script>` block. Append one object; the evidence panel, the attribution bars,
-the "devices benchmarked" count and the terminal demo all rebuild from it. Copy
-the values straight out of the run's `results/*.json` (`runs.<variant>.summary`,
-at the thread count that won), and paste them at **full precision** — the
-speedup labels are computed, not typed, so rounding early makes them disagree
-with the published figures.
+the carousel (it appears automatically once there are two phones), the "devices
+benchmarked" count and the terminal demo all rebuild from it. Copy the values
+straight out of the run's `results/*.json` (`runs.<variant>.summary`, at the
+thread count that won), and paste them at **full precision** — the speedup
+labels are computed, not typed, so rounding early makes them disagree with the
+published figures.
 
 ```js
 {
-  status: "measured",              // or "queued" — detected, not yet swept
+  status: "measured",              // the only legal value: a phone that actually ran
   soc: "…", phone: "…", abi: "arm64-v8a", date: "…",
   dotprod: true, i8mm: false, sve2: false,     // from the Features line
   bigCores: [6, 7], cores: "…",
@@ -248,9 +267,16 @@ with the published figures.
 the gain from *its own* lever rather than a cumulative total.
 
 **2. The app** — `uv run tools/make_app_evidence.py` (above), which folds the
-new `results/*.json` into `app/src/data/evidence.json`.
+new `results/*.json` into `app/src/data/evidence.json`. If the phone's marketing
+SoC name can't be derived from `ro.soc.model`, add it to `KNOWN_DEVICES` in
+`app/src/lib/cpu.ts`, keyed by `ro.product.model`.
 
 **3. The README** — the *Devices covered so far* table.
+
+**Then grep.** A few lines of prose cite a phone by name (the headline gain, the
+KleidiAI negative, the "devices measured so far" notes in `site/index.html` and
+`README.md`). Search for the phone names and the headline figures, and make sure
+none of them still claim a phone is the only one measured.
 
 Publish the ladder whatever it says. A phone where the arch flags buy little, or
 where KleidiAI finally wins, is more interesting than another confirmation — and

@@ -21,9 +21,11 @@ i8mm-friendly layouts (20.5 → 101.4 prefill t/s). Decode improves 1.34× (12.7
 
 Raw data: [results/](results/).
 
-The size of that gain is a property of the silicon. A chip without `i8mm` has a different ceiling
-and a different best config, so the app ships the loop rather than the result: it measures threads
-× flash attention × KV-cache quant on whatever phone it is installed on.
+The size of that gain is a property of the silicon — and that is now measured, not asserted. On a
+**Samsung Galaxy A34 5G** (Dimensity 1080, `dotprod` but **no `i8mm`**) the same lever yields
+**3.88×** (18.5 → 71.7 prefill t/s) and a different optimal thread count. A chip without `i8mm` has
+a lower ceiling, so the app ships the loop rather than the result: it measures threads × flash
+attention × KV-cache quant on whatever phone it is installed on.
 
 ## The app
 
@@ -125,15 +127,24 @@ flowchart LR
 
 ### The optimizations, and what each achieved
 
-| Lever | Kind | When | Result (Nothing 2a, Llama 3.2 1B Q4_0) |
-|---|---|---|---|
-| `-march=…+dotprod+i8mm` | SIMD code generation | build-time | **4.94× prefill, 1.34× decode** vs generic build |
-| Weight repacking | data layout | model load | folded into the 4.94×; isolated by the `norepack` builds |
-| KleidiAI kernels | kernel library | build-time | **≈0%** over arch flags for Q4_0 (see below) |
-| Q4_0 quantization | memory traffic | model format | 1B model in ~700 MB; quant sweep (vs Q4_K_M, Q8_0) is next |
-| Thread count | big.LITTLE scheduling | runtime, in-app | **+25% decode** (2 threads on big cores vs 6 mixed) |
-| Flash attention, KV q8_0 | memory traffic | runtime, in-app | swept per device — helps some chips, hurts others |
-| Tokens per joule | energy measurement | runtime, in-app | per-config efficiency, sampled from the battery rails |
+Llama 3.2 1B Q4_0 on both measured phones. Where the two disagree, that disagreement *is* the
+finding — the lever generalizes, its value does not.
+
+| Lever | Kind | When | Nothing 2a (`i8mm`) | Galaxy A34 (`dotprod` only) |
+|---|---|---|---|---|
+| Arch flags (`-march=…`) | SIMD code generation | build-time | **4.94× prefill**, 1.34× decode | **3.88× prefill**, 1.44× decode |
+| Weight repacking | data layout | model load | folded into the gain above; isolated by the `norepack` builds | same |
+| KleidiAI kernels | kernel library | build-time | **≈0%** over arch flags | **≈0%** (+0.03% prefill) |
+| Q4_0 quantization | memory traffic | model format | 1B model in ~700 MB; quant sweep (vs Q4_K_M, Q8_0) is next | same |
+| Thread count | big.LITTLE scheduling | runtime, in-app | **+25% decode** (2 threads on big cores vs 6 mixed) | **+36% decode** (17.3 vs 12.8 t/s) |
+| Flash attention, KV q8_0 | memory traffic | runtime, in-app | swept per device — helps some chips, hurts others | swept per device |
+| Tokens per joule | energy measurement | runtime, in-app | per-config efficiency, sampled from the battery rails | same |
+
+The thread-count row hides the sharpest result: on the A34 the *best* thread count **flips with the
+build**. The generic build decodes fastest at 6 threads (12.0 t/s); once the arch flags are on, 6
+threads is the *worst* choice (12.8 t/s) and 2 threads — the two big A78 cores, nothing else — wins
+at 17.3 t/s. A config tuned for one build is actively wrong for the other. No static default
+survives that; it has to be measured on the device, which is what the app does.
 
 Build-time levers arrive in the app pre-baked inside llama.rn's feature-dispatched kernels; the
 runtime levers are the ones no binary can decide in advance, so the app measures them on the
@@ -147,12 +158,20 @@ anyone can verify them:
 ```bash
 # 1. Cross-compile llama.cpp for Android (Windows/macOS/Linux; needs Android NDK + CMake)
 #    Variants and exact flags are documented in docs/ — the key ones:
-#      generic:  no arch flags (what a non-optimized app ships)
-#      arch:     -march=armv8.2-a+dotprod+i8mm
-#      kleidiai: arch flags + -DGGML_CPU_KLEIDIAI=ON
+#      generic:     no arch flags (what a non-optimized app ships)
+#      arch:        -march=armv8.2-a+dotprod+i8mm
+#      kleidiai:    arch flags + -DGGML_CPU_KLEIDIAI=ON
+#      dp-arch:     -march=armv8.2-a+dotprod       (for chips WITHOUT i8mm)
+#      dp-kleidiai: dp-arch flags + KleidiAI
 
 # 2. Run the sweep (pushes binaries + model, benchmarks, writes results/*.json)
+#    Pick the ladder that matches your chip — check `adb shell grep -m1 Features /proc/cpuinfo`.
+
+# ...on a phone WITH i8mm (e.g. Nothing 2a):
 python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic arch kleidiai
+
+# ...on a dotprod-only phone (e.g. Galaxy A34) — the i8mm builds would SIGILL here:
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic dp-arch dp-kleidiai
 ```
 
 Methodology: 5 repetitions per point, fixed prompt (128) and generation (64) lengths, 2-minute
@@ -163,26 +182,32 @@ cooldowns between variants, battery level and temperature recorded before and af
 Devices are listed here once they have run through the harness. This is the full extent of what has
 been measured.
 
-| Device | SoC | CPU features | Cores | Status |
-|---|---|---|---|---|
-| Nothing Phone 2a | MediaTek MT6886 (Dimensity 7200 Pro) | `asimddp`, **`i8mm`**, `sve2`, `bf16` | 2× A715 @ 2.8 GHz + 6× A510 @ 2.0 GHz | ✅ full build sweep in [results/](results/) |
+| Device | SoC | CPU features | Cores | Prefill gain from arch flags | Status |
+|---|---|---|---|---|---|
+| Nothing Phone 2a | MediaTek MT6886 (Dimensity 7200 Pro) | `asimddp`, **`i8mm`**, `sve2`, `bf16` | 2× A715 @ 2.8 GHz + 6× A510 @ 2.0 GHz | **4.94×** (20.5 → 101.4 t/s) | ✅ full build sweep in [results/](results/) |
+| Samsung Galaxy A34 5G | MediaTek MT6877 (Dimensity 1080) | `asimddp`, **no `i8mm`**, no SVE | 2× A78 @ 2.6 GHz + 6× A55 @ 2.0 GHz | **3.88×** (18.5 → 71.7 t/s) | ✅ full build sweep in [results/](results/) |
 
-The headline rests on `i8mm`, which many shipping Arm phones don't have. A dotprod-only chip takes
-a different kernel path and has a different ceiling, which is why the app measures the phone it is
-installed on rather than applying this table's conclusions.
+**The two phones disagree, and that is the whole point.** The 2a has `i8mm`; the A34 has only
+`dotprod`. The *same* lever — Arm-aware compiler flags — buys 4.94× on one and 3.88× on the other,
+because the dotprod-only chip has no matrix-multiply instructions to unlock. Neither number
+predicts the other, which is why the app ships the measurement loop rather than a hardcoded config.
 
 **Adding your phone** takes one command and no code: see
 [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md). The harness detects the chip,
 picks its build variants, and writes a `results/<device>-<timestamp>.json` — which is also the
 unit the app's Lab tab and the project site consume.
 
-## KleidiAI: no measurable gain here
+## KleidiAI: no measurable gain on either phone
 
-On the i8mm chip measured so far, KleidiAI microkernels land **within noise of the plain
-arch-flags build** for Q4_0: llama.cpp's own aarch64 repack path already exploits dotprod/i8mm
-well. The 4.94× is therefore attributable to arch-aware codegen plus repacking, not to any single
-kernel library. The attribution ladder in `results/` isolates each lever. This result is specific
-to Q4_0 on this chip; other quantizations and other silicon may differ.
+On **both** phones measured, KleidiAI microkernels land **within noise of the plain arch-flags
+build** for Q4_0 — +0.03% prefill on the A34, and flat on the 2a. llama.cpp's own aarch64 repack
+path already exploits dotprod/i8mm well, so the speedups are attributable to arch-aware codegen
+plus repacking, not to any single kernel library.
+
+This is the result we least wanted and are reporting anyway. A project whose entire claim is
+"measure, don't assume" does not get to quietly drop the lever that came out flat. The attribution
+ladder in `results/` isolates each one. The finding is specific to Q4_0 on these two chips; other
+quantizations and other silicon may well disagree, which is why KleidiAI stays in the sweep.
 
 ## Repository layout
 
