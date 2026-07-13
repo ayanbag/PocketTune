@@ -1,6 +1,6 @@
-<img src="site/public/logo.png" alt="Image" width="100%" />
+<img src="site/public/poster.png" alt="Image" width="100%" />
 
-**The fastest local-LLM setup for *your* phone — found and applied in one tap.**
+**Finds and applies the fastest local-LLM configuration for the phone it runs on.**
 
 PocketTune is an Android app that detects your phone's Arm CPU features, benchmarks a sweep of
 LLM inference configurations **on the device itself**, then recommends and applies the fastest
@@ -8,27 +8,22 @@ one — and gives you a fully offline chat app running on it.
 
 Built for the [Arm Create: AI Optimization Challenge 2026](https://arm-ai-optimization-challenge.devpost.com/) (Mobile AI track).
 
-> Every Arm phone is different silicon. Some cores have `i8mm` matrix instructions, some only
-> `dotprod`. The right quantization, kernel path, and thread layout differ per device — and
-> almost nobody tunes for it. PocketTune closes the loop: **detect → sweep → recommend → apply.**
+> Arm phones differ in silicon. Some cores have `i8mm` matrix instructions, some only `dotprod`.
+> The best quantization, kernel path, and thread layout differ per device, so PocketTune closes the
+> loop on the device itself: **detect → sweep → recommend → apply.**
 
 ## Headline result
 
-Every number here belongs to a specific phone — that is the whole thesis, so nothing is published
-unlabelled.
-
-On the first device through the harness (**Nothing Phone 2a**, MediaTek Dimensity 7200 Pro, an
-Armv9 chip *with* `i8mm`): **4.94× faster prompt processing** — same phone, same Llama 3.2 1B Q4_0
-model, same llama.cpp source — purely from Arm-aware build flags (`armv8.2-a+dotprod+i8mm`) and
-llama.cpp's Q4_0 repack into i8mm-friendly layouts (20.5 → 101.4 prefill t/s). Decode improves
-1.34× (12.7 → 17.0 t/s). 
+On the **Nothing Phone 2a** (MediaTek Dimensity 7200 Pro, an Armv9 chip with `i8mm`): **4.94×
+faster prompt processing** — same phone, same Llama 3.2 1B Q4_0 model, same llama.cpp source —
+from Arm-aware build flags (`armv8.2-a+dotprod+i8mm`) and llama.cpp's Q4_0 repack into
+i8mm-friendly layouts (20.5 → 101.4 prefill t/s). Decode improves 1.34× (12.7 → 17.0 t/s).
 
 Raw data: [results/](results/).
 
-The *size* of that gain is a property of the silicon, not of PocketTune: a chip without `i8mm` has
-a different ceiling and a different best config. So the app doesn't ship this result — it ships the
-loop that finds the equivalent one for whatever phone it's installed on (threads × flash attention
-× KV-cache quant, benchmarked on device).
+The size of that gain is a property of the silicon. A chip without `i8mm` has a different ceiling
+and a different best config, so the app ships the loop rather than the result: it measures threads
+× flash attention × KV-cache quant on whatever phone it is installed on.
 
 ## The app
 
@@ -43,11 +38,11 @@ Five tabs, all TypeScript (React Native + [llama.rn](https://github.com/mybigday
 | **Lab** | The published harness evidence (attribution ladder, thread-scaling curves) plus this phone's own tuning history — every number traceable to raw JSON in `results/` |
 
 Where the kernel exposes the battery rails (`/sys/class/power_supply/battery`), the sweep also
-reports **tokens per joule** per config — energy is a first-class metric, not an afterthought.
+reports **tokens per joule** per config.
 
 llama.rn ships six arm64 kernel builds and picks one at runtime by CPU feature — an i8mm-capable
-chip gets `v8_2_dotprod_i8mm`, a dotprod-only one gets `v8_2_dotprod`. Feature-aware dispatch is
-the same story our harness measures with explicit per-arch builds.
+chip gets `v8_2_dotprod_i8mm`, a dotprod-only one gets `v8_2_dotprod`. That runtime dispatch is the
+app-side equivalent of the explicit per-arch builds the harness compares.
 
 ## Quick start — run the app
 
@@ -72,10 +67,10 @@ Tip: skip the in-app download by pushing a GGUF you already have:
 
 ## Using the app
 
-1. **Device** — open it first. It shows what the app detected on *your* phone: the CPU feature
+1. **Device** — open it first. It shows what the app detected on your phone: the CPU feature
    checklist (dotprod / i8mm / SVE2 / SME2), the core clusters with their max clocks, which cores
    are the big ones, and which of llama.rn's six arm64 kernel builds the runtime dispatch selected.
-   If something looks wrong here, nothing downstream can be trusted — that's why it's a tab.
+   Everything downstream depends on this detection being right.
 2. **Models** — download a model (Llama 3.2 1B Q4_0 is the default pick, ~700 MB) or use one you
    pushed over adb. Everything after this step works offline.
 3. **Tune** — pick **Quick** (~2 min: 64-token prefill / 24-token decode, 2 reps per config) or
@@ -84,7 +79,7 @@ Tip: skip the in-app download by pushing a GGUF you already have:
    tokens per joule. The recommended winner is scored 65% decode / 35% prefill (decode is what chat
    *feels* like). Tap **Apply**.
 4. **Chat** — a fully offline assistant running the applied config. Every reply shows its measured
-   decode speed, so the tuning claim stays verifiable in daily use.
+   decode speed.
 5. **Lab** — the published harness evidence for benchmarked devices, plus this phone's own tuning
    history.
 
@@ -134,7 +129,7 @@ flowchart LR
 |---|---|---|---|
 | `-march=…+dotprod+i8mm` | SIMD code generation | build-time | **4.94× prefill, 1.34× decode** vs generic build |
 | Weight repacking | data layout | model load | folded into the 4.94×; isolated by the `norepack` builds |
-| KleidiAI kernels | kernel library | build-time | **≈0%** over arch flags for Q4_0 — reported honestly |
+| KleidiAI kernels | kernel library | build-time | **≈0%** over arch flags for Q4_0 (see below) |
 | Q4_0 quantization | memory traffic | model format | 1B model in ~700 MB; quant sweep (vs Q4_K_M, Q8_0) is next |
 | Thread count | big.LITTLE scheduling | runtime, in-app | **+25% decode** (2 threads on big cores vs 6 mixed) |
 | Flash attention, KV q8_0 | memory traffic | runtime, in-app | swept per device — helps some chips, hurts others |
@@ -165,30 +160,29 @@ cooldowns between variants, battery level and temperature recorded before and af
 
 ## Devices covered so far
 
-PocketTune isn't built for a particular phone — but its published numbers always come from one, so
-this list is the exact extent of what has been measured. Devices are added here only after they
-run through the harness.
+Devices are listed here once they have run through the harness. This is the full extent of what has
+been measured.
 
 | Device | SoC | CPU features | Cores | Status |
 |---|---|---|---|---|
 | Nothing Phone 2a | MediaTek MT6886 (Dimensity 7200 Pro) | `asimddp`, **`i8mm`**, `sve2`, `bf16` | 2× A715 @ 2.8 GHz + 6× A510 @ 2.0 GHz | ✅ full build sweep in [results/](results/) |
 
-`i8mm` is the lever the headline rests on, and plenty of shipping Arm phones don't have it — a
-dotprod-only chip takes a different kernel path and has a different ceiling. That's precisely why
-the app measures the phone it's installed on instead of shipping this table's conclusions.
+The headline rests on `i8mm`, which many shipping Arm phones don't have. A dotprod-only chip takes
+a different kernel path and has a different ceiling, which is why the app measures the phone it is
+installed on rather than applying this table's conclusions.
 
 **Adding your phone** takes one command and no code: see
 [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md). The harness detects the chip,
 picks its build variants, and writes a `results/<device>-<timestamp>.json` — which is also the
 unit the app's Lab tab and the project site consume.
 
-## An honest finding
+## KleidiAI: no measurable gain here
 
 On the i8mm chip measured so far, KleidiAI microkernels land **within noise of the plain
 arch-flags build** for Q4_0: llama.cpp's own aarch64 repack path already exploits dotprod/i8mm
-well. The 4.94× headline is attributable to arch-aware codegen + repacking, not to any single
-library — the attribution ladder in `results/` isolates each lever. We report it that way, and we
-don't extrapolate it to silicon we haven't run.
+well. The 4.94× is therefore attributable to arch-aware codegen plus repacking, not to any single
+kernel library. The attribution ladder in `results/` isolates each lever. This result is specific
+to Q4_0 on this chip; other quantizations and other silicon may differ.
 
 ## Repository layout
 

@@ -44,6 +44,8 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+#documentation
 CLAUDE.md
 PLAN.md
 RELEASE.MD
