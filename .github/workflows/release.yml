@@ -1,0 +1,76 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release (e.g. v0.1.0-rc1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        working-directory: .
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "apk=PocketTune-$TAG-arm64.apk" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Android NDK 27.1.12297006
+        working-directory: .
+        run: sdkmanager --install "ndk;27.1.12297006"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: app/android
+
+      - run: npm ci
+
+      - name: Build release APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        working-directory: .
+        run: mv app/android/app/build/outputs/apk/release/app-release.apk "${{ steps.version.outputs.apk }}"
+
+      - name: Publish release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          APK="${{ steps.version.outputs.apk }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --title "PocketTune $TAG" \
+              --generate-notes
+          fi
