@@ -1,12 +1,12 @@
 /**
  * Device tab — what silicon is in this phone and what it means for local AI.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { spacing, Theme, type } from '../theme';
 import { useStore } from '../store';
 import { Card, Chip, Divider, Row, SectionHeader, StatTile } from '../components/ui';
-import { CoreTopology } from '../components/charts';
+import { CoreTopology, HBars } from '../components/charts';
 import { BoltIcon, ChipIcon } from '../components/icons';
 
 function FeatureRow({
@@ -34,6 +34,14 @@ function FeatureRow({
 export function DeviceScreen({ theme }: { theme: Theme }) {
   const profile = useStore(s => s.profile);
   const battery = useStore(s => s.battery);
+  const modelList = useStore(s => s.modelList);
+  const refreshBattery = useStore(s => s.refreshBattery);
+
+  // Battery/temp are point-in-time reads; keep them current while visible.
+  useEffect(() => {
+    const t = setInterval(refreshBattery, 10_000);
+    return () => clearInterval(t);
+  }, [refreshBattery]);
 
   if (!profile) {
     return (
@@ -173,7 +181,7 @@ export function DeviceScreen({ theme }: { theme: Theme }) {
             unit="°C"
           />
         </Row>
-        {battery?.watts != null && (
+        {battery?.watts != null ? (
           <Card theme={theme} style={{ marginTop: spacing.m }}>
             <Row style={{ gap: 10 }}>
               <BoltIcon color={theme.series[2]} size={18} />
@@ -183,7 +191,45 @@ export function DeviceScreen({ theme }: { theme: Theme }) {
               </Text>
             </Row>
           </Card>
-        )}
+        ) : battery?.levelPct == null && battery?.temperatureC == null ? (
+          <Card theme={theme} style={{ marginTop: spacing.m }}>
+            <Text style={[type.subhead, { color: theme.inkSecondary }]}>
+              This device restricts battery telemetry (sysfs hidden from apps).
+              Speed tuning works fully; tokens-per-joule won't be reported here.
+            </Text>
+          </Card>
+        ) : null}
+      </View>
+
+      <View>
+        <SectionHeader theme={theme} title="What fits in memory" />
+        <Card theme={theme}>
+          <HBars
+            theme={theme}
+            unit="GB"
+            data={[
+              {
+                label: 'This phone — total RAM',
+                value: profile.memTotalMb / 1024,
+                color: theme.fillStrong,
+              },
+              ...[...modelList]
+                .filter(m => m.sizeBytes > 0)
+                .sort((a, b) => a.sizeBytes - b.sizeBytes)
+                .slice(0, 6)
+                .map(m => ({
+                  label: `${m.name} ${m.quant}`,
+                  value: m.sizeBytes / 1e9,
+                })),
+            ]}
+          />
+          <Divider theme={theme} />
+          <Text style={[type.subhead, { color: theme.inkSecondary, marginTop: spacing.m }]}>
+            Model file sizes against this phone's RAM. Weights are memory-mapped,
+            but Android still needs headroom for the KV cache, the app, and the
+            OS — smaller quants leave room for longer contexts.
+          </Text>
+        </Card>
       </View>
     </ScrollView>
   );

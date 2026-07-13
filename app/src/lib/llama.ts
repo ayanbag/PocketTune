@@ -19,6 +19,10 @@ export interface CompletionStats {
   text: string;
   decodeTps: number;
   prefillTps: number;
+  /** tokens generated */
+  tokens: number;
+  /** decode wall time in ms */
+  ms: number;
 }
 
 let context: LlamaContext | null = null;
@@ -135,6 +139,8 @@ export function chat(
       text: result.text || acc,
       decodeTps: t?.predicted_per_second ?? 0,
       prefillTps: t?.prompt_per_second ?? 0,
+      tokens: t?.predicted_n ?? 0,
+      ms: t?.predicted_ms ?? 0,
     };
   });
   return {

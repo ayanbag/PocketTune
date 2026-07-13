@@ -2,21 +2,26 @@
  * PocketTune — find and apply the fastest local-LLM configuration for the
  * Arm silicon in this phone. Arm Create: AI Optimization Challenge 2026.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { spacing, type as t, useTheme } from './src/theme';
-import { useStore } from './src/store';
-import { ChatIcon, ChipIcon, LabIcon, TuneIcon } from './src/components/icons';
+import { TabId, useStore } from './src/store';
+import { useKeyboardHeight } from './src/lib/keyboard';
+import { BoxIcon, ChatIcon, ChipIcon, LabIcon, TuneIcon } from './src/components/icons';
 import { DeviceScreen } from './src/screens/DeviceScreen';
+import { ModelsScreen } from './src/screens/ModelsScreen';
 import { TuneScreen } from './src/screens/TuneScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { LabScreen } from './src/screens/LabScreen';
 
-type Tab = 'device' | 'tune' | 'chat' | 'lab';
-
-const TABS: { id: Tab; label: string; Icon: typeof ChipIcon }[] = [
+const TABS: { id: TabId; label: string; Icon: typeof ChipIcon }[] = [
   { id: 'device', label: 'Device', Icon: ChipIcon },
+  { id: 'models', label: 'Models', Icon: BoxIcon },
   { id: 'tune', label: 'Tune', Icon: TuneIcon },
   { id: 'chat', label: 'Chat', Icon: ChatIcon },
   { id: 'lab', label: 'Lab', Icon: LabIcon },
@@ -24,10 +29,18 @@ const TABS: { id: Tab; label: string; Icon: typeof ChipIcon }[] = [
 
 function Root() {
   const theme = useTheme();
-  const [tab, setTab] = useState<Tab>('device');
+  const tab = useStore(s => s.tab);
+  const setTab = useStore(s => s.setTab);
   const boot = useStore(s => s.boot);
   const booted = useStore(s => s.booted);
   const tuneRunning = useStore(s => s.tune.running);
+  // Manual keyboard avoidance (edge-to-edge kills adjustResize, see
+  // lib/keyboard.ts): pad the content by the keyboard height and hide the
+  // tab bar, so whatever input has focus sits flush on top of the keyboard.
+  // The reported height excludes the gesture-nav inset, so add it back.
+  const keyboardHeight = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
+  const keyboardPad = keyboardHeight > 0 ? keyboardHeight + insets.bottom : 0;
 
   useEffect(() => {
     boot();
@@ -39,7 +52,7 @@ function Root() {
         barStyle={theme.dark ? 'light-content' : 'dark-content'}
         backgroundColor={theme.page}
       />
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingBottom: keyboardPad }}>
         {!booted ? (
           <View style={styles.bootWrap}>
             <Text style={[t.largeTitle, { color: theme.inkPrimary }]}>PocketTune</Text>
@@ -51,6 +64,9 @@ function Root() {
           <>
             <View style={{ flex: 1, display: tab === 'device' ? 'flex' : 'none' }}>
               <DeviceScreen theme={theme} />
+            </View>
+            <View style={{ flex: 1, display: tab === 'models' ? 'flex' : 'none' }}>
+              <ModelsScreen theme={theme} />
             </View>
             <View style={{ flex: 1, display: tab === 'tune' ? 'flex' : 'none' }}>
               <TuneScreen theme={theme} />
@@ -68,6 +84,7 @@ function Root() {
       <View
         style={[
           styles.tabBar,
+          keyboardHeight > 0 && { display: 'none' },
           {
             backgroundColor: theme.surfaceElevated,
             borderTopColor: theme.hairline,

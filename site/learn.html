@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inside PocketTune — Every component, explained from zero.</title>
 <meta name="description" content="Every component of PocketTune explained from zero: quantization, Arm CPU instructions, compiler flags, llama.cpp, the benchmark harness, and why each piece was chosen.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231d1d1f'/><text y='.8em' font-size='56' x='24' fill='%23ffffff'>⏚</text></svg>">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
     --bg: #ffffff; --bg-alt: #f5f5f7; --card: #ffffff;
@@ -35,6 +36,7 @@
   img { max-width: 100%; }
 
   .band { width: 100%; }
+  section[id] { scroll-margin-top: 80px; }
   .band.grey { background: var(--bg-alt); }
   .col { max-width: 980px; margin: 0 auto; padding: 88px 22px; }
 
@@ -62,14 +64,26 @@
   .chev:hover { text-decoration: underline; }
   a:focus-visible, summary:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; border-radius: 6px; }
 
-  nav { position: sticky; top: 0; z-index: 30; height: 48px; background: var(--nav-bg); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--hair); }
-  .nav-inner { max-width: 1024px; margin: 0 auto; height: 100%; padding: 0 22px; display: flex; align-items: center; gap: 28px; }
-  .brand { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
-  .brand .mk { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 12px; }
-  nav .links { margin-left: auto; display: flex; gap: 26px; align-items: center; }
-  nav .links a { font-size: 12px; color: var(--ink); text-decoration: none; opacity: .85; }
+  nav { position: sticky; top: 0; z-index: 30; height: 68px; background: var(--nav-bg); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--hair); }
+  .nav-inner { max-width: 1100px; margin: 0 auto; height: 100%; padding: 0 22px; display: flex; align-items: center; gap: 30px; }
+  .brand { font-family: var(--display); font-size: 20px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+  .brand .mk { width: 28px; height: 28px; border-radius: 8px; display: block; }
+  nav .links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+  nav .links a { font-size: 15px; color: var(--ink); text-decoration: none; opacity: .85; letter-spacing: -0.01em; }
   nav .links a:hover { opacity: 1; color: var(--link); }
-  @media (max-width: 640px) { nav .links a.hide-sm { display: none; } }
+  nav .links a.nav-cta { opacity: 1; font-weight: 500; padding: 8px 16px; border-radius: 980px; display: inline-flex; align-items: center; gap: 7px; line-height: 1; transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease; }
+  nav .links a.nav-cta.ghost { color: var(--link); border: 1px solid color-mix(in srgb, var(--link) 45%, transparent); }
+  nav .links a.nav-cta.ghost:hover { background: color-mix(in srgb, var(--link) 10%, transparent); border-color: var(--link); transform: scale(1.03); }
+  nav .links a.nav-cta.solid { background: var(--blue); color: #fff; border: 1px solid var(--blue); }
+  nav .links a.nav-cta.solid:hover { background: var(--blue-hover); color: #fff; transform: scale(1.03); }
+  nav .links a.nav-cta svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
+  @media (max-width: 860px) { nav .links a.hide-sm { display: none; } }
+  @media (max-width: 640px) {
+    nav { height: 60px; }
+    nav .links { gap: 12px; }
+    nav .links a.nav-cta { padding: 7px 13px; font-size: 14px; }
+    nav .links a.nav-cta.ghost.hide-xs { display: none; }
+  }
 
   .fade { opacity: 0; transform: translateY(30px); }
   .fade.in { opacity: 1; transform: none; transition: opacity .9s cubic-bezier(.28,.11,.32,1), transform .9s cubic-bezier(.28,.11,.32,1); }
@@ -101,12 +115,30 @@
   .arch-box:hover { transform: translateX(4px); }
   .arch-box .t { font-weight: 600; font-size: 16px; }
   .arch-box .d { color: var(--ink-2); }
-  .arch-box.silicon { background: var(--blue); color: #fff; }
+  .arch-box.silicon, .band.grey .arch-box.silicon { background: var(--blue); color: #fff; }
   .arch-box.silicon .d { color: rgba(255,255,255,.82); }
+  .arch-box.silicon code { background: rgba(255,255,255,.18); color: #fff; }
   .arch-conn { display: grid; grid-template-columns: 140px 1fr; }
   .arch-conn span { grid-column: 2; justify-self: center; width: 2px; height: 16px; background: repeating-linear-gradient(to bottom, var(--hair) 0 5px, transparent 5px 10px); background-size: 100% 20px; animation: flow 1.1s linear infinite; }
   @keyframes flow { to { background-position: 0 20px; } }
   @media (max-width: 600px) { .arch-row, .arch-conn { grid-template-columns: 1fr; } .arch-conn span { grid-column: 1; } }
+
+  /* in-app tuning loop — one box per stage, arrows between */
+  .pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .pipe-step { background: var(--card); border-radius: var(--radius-md); padding: 16px 14px; position: relative; transition: transform .3s ease; }
+  .band.grey .pipe-step { background: var(--bg); }
+  .pipe-step:hover { transform: translateY(-4px); }
+  .pipe-step .pn { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--blue); }
+  .pipe-step .pt { font-weight: 600; font-size: 15px; margin-top: 2px; }
+  .pipe-step .pd { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-top: 5px; }
+  .pipe-step .pf { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 10px; letter-spacing: 0; }
+  .pipe-step::after { content: "›"; position: absolute; right: -11px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: 16px; z-index: 1; }
+  .pipe-step:last-child::after { content: none; }
+  @media (max-width: 900px) {
+    .pipe { grid-template-columns: repeat(2, 1fr); }
+    .pipe-step::after { content: none; }
+  }
+  @media (max-width: 440px) { .pipe { grid-template-columns: 1fr; } }
 
   .tree { background: #1d1d1f; border-radius: var(--radius-md); padding: 26px 28px; font-family: var(--mono); font-size: 13px; line-height: 2; overflow-x: auto; color: #d2d2d7; letter-spacing: 0; }
   .tree .dir { color: #6ab0ff; }
@@ -142,14 +174,21 @@
 
 <nav>
   <div class="nav-inner">
-    <a class="brand" href="index.html"><span class="mk">⏚</span>PocketTune</a>
+    <a class="brand" href="index.html"><img class="mk" src="icon.svg" alt="" width="28" height="28">PocketTune</a>
     <div class="links">
-      <a href="#prereq">Prerequisites</a>
+      <a href="#prereq" class="hide-sm">Prerequisites</a>
       <a href="#arch" class="hide-sm">Architecture</a>
-      <a href="#components" class="hide-sm">Components</a>
+      <a href="#optimizations" class="hide-sm">Optimizations</a>
       <a href="#method" class="hide-sm">Method</a>
-      <a href="index.html">Overview</a>
-      <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
+      <a class="nav-cta ghost" href="index.html">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3 1 7.2v.9h1.9V14a.6.6 0 0 0 .6.6h3V10h3v4.6h3a.6.6 0 0 0 .6-.6V8.1H15v-.9L8 1.3Z"/></svg>
+        Home
+      </a>
+      <a class="nav-cta ghost" href="https://github.com/ayanbag/pockettune" title="placeholder link">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        GitHub
+      </a>
+      <a class="nav-cta solid" href="https://github.com/ayanbag/pockettune/releases/latest" title="placeholder link">Download</a>
     </div>
   </div>
 </nav>
@@ -161,9 +200,11 @@
     <p class="lead fade">No background assumed. Read this and every claim on the overview page will make complete sense.</p>
     <div class="toc fade">
       <a href="#prereq">Prerequisites</a>
+      <a href="#more">More ideas</a>
       <a href="#arch">Architecture</a>
       <a href="#components">Components</a>
       <a href="#method">Method</a>
+      <a href="#optimizations">Optimizations</a>
       <a href="#findings">Findings</a>
     </div>
   </div>
@@ -194,19 +235,19 @@
       </div>
       <div class="g-card fade">
         <span class="k">dotprod and i8mm</span>
-        <p>Arm chips include special instructions that crunch many numbers in a single step. <code>dotprod</code> is a good shortcut and is nearly everywhere. <code>i8mm</code> is a <b>far better one for 8-bit integer matmul</b> — exactly what quantized models need. The Nothing 2a has i8mm; a Pixel 7a does not.</p>
+        <p>Arm chips include special instructions that crunch many numbers in a single step. <code>dotprod</code> is a good shortcut and is nearly everywhere. <code>i8mm</code> is a <b>far better one for 8-bit integer matmul</b> — exactly what quantized models need. Crucially, <b>it isn't everywhere</b>: two flagship phones of the same generation can differ, so the fast path can never be assumed — only detected.</p>
       </div>
       <div class="g-card fade">
         <span class="k">The -march flag</span>
-        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=armv8.2a+i8mm+dotprod</code> is permission to emit them. This one flag was worth <b>4.94×</b> on prefill in our measurements. Omit it and the silicon idles.</p>
+        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=…+i8mm+dotprod</code> is permission to emit them. On the chip we've benchmarked so far it was worth <b>4.94×</b> on prefill. The right flags are the ones matching <i>that</i> phone's feature list — which is why they're chosen after detection, not baked in.</p>
       </div>
       <div class="g-card fade">
         <span class="k">big.LITTLE cores</span>
-        <p>Phone CPUs mix <b>fast, power-hungry cores</b> with <b>slow, efficient ones</b>. The 2a has 2 fast A715s and 6 slow A510s. The counter-intuition: using <b>all eight</b> makes generation <i>slower</i> than using just the two fast ones — the slow cores become the bottleneck everyone waits for.</p>
+        <p>Phone CPUs mix <b>fast, power-hungry cores</b> with <b>slow, efficient ones</b> — commonly two big and six little, though some chips add a third middle tier. The counter-intuition: using <b>every core</b> makes generation <i>slower</i> than using just the big ones — the little cores become the bottleneck everyone waits for. How many big cores, and at which indices, differs per phone.</p>
       </div>
       <div class="g-card fade">
         <span class="k">KleidiAI</span>
-        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. The result on this chip, for Q4_0: <b>no measurable gain</b> once the compiler flags are right. Plain compiled i8mm code already saturates the hardware.</p>
+        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. On the i8mm chip measured so far, for Q4_0: <b>no measurable gain</b> once the compiler flags are right, because plain compiled i8mm code already saturates that hardware. On SME2 silicon or a different quant the verdict could invert — so it stays a lever under test, per device.</p>
       </div>
       <div class="g-card fade">
         <span class="k">llama.cpp and llama-bench</span>
@@ -220,53 +261,122 @@
   </div>
 </section>
 
-<section id="arch" class="band">
+<section id="more" class="band">
   <div class="col stack lg">
     <div class="center stack fade">
       <div class="kicker">Chapter two</div>
+      <h2>The background knowledge.</h2>
+      <p class="lead">None of these are required to use the app. Each one turns a mysterious number on the overview page into an obvious one.</p>
+    </div>
+    <div class="glossary">
+      <div class="g-card fade">
+        <span class="k">SIMD — one instruction, many numbers</span>
+        <p><b>S</b>ingle <b>I</b>nstruction, <b>M</b>ultiple <b>D</b>ata: instead of adding numbers one at a time, the CPU processes a whole row of them per instruction. <code>dotprod</code> and <code>i8mm</code> are SIMD instructions specialised for the multiply-and-add work at the heart of matmul — that's the entire mechanism behind the 4.94×.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Memory bandwidth — the real speed limit</span>
+        <p>Writing each token means reading essentially <b>every weight in the model</b> from RAM. A ~700&nbsp;MB model at 17 tok/s streams ~12&nbsp;GB every second — close to what a phone's memory can move at all. That's why decode barely improves from faster math (1.34×) while prefill leaps (4.94×), and why smaller quantizations speed up generation: less data to haul.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">The KV cache</span>
+        <p>While writing an answer, the model must "remember" everything said so far. The <b>KV cache</b> stores that work so each new token only pays for itself — and it grows with the conversation, living in RAM. One of the app's levers quantizes it to 8-bit (<code>q8_0</code>), roughly halving its size. Whether that's free or costly is measured, per phone.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Flash attention</span>
+        <p>A smarter <i>ordering</i> of the same attention math: work in tiles small enough to stay in the CPU's fast cache, instead of building one huge intermediate matrix in slow RAM. Identical answers, less memory traffic. It helps some chips and hurts others — which is exactly why the app sweeps it instead of assuming it.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Threads and cores</span>
+        <p>A <b>thread</b> is one worker; a <b>core</b> is the hardware that runs it. Matmul splits nicely across threads — but each step ends with everyone waiting at a barrier for the slowest worker. Add workers on slow cores and the whole team slows down. That's the mechanism behind "2 threads beats 6".</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Thermal throttling</span>
+        <p>A phone has no fan. Under sustained load the chip heats up and the OS quietly slows the cores to protect it — which silently corrupts any benchmark that runs configs back-to-back. It's why the harness enforces <b>cooldowns between variants</b> and logs temperature before and after each one.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Runtime dispatch — one APK, every chip</span>
+        <p>The app can't ship a separate build per phone. So the engine binding packs <b>six arm64 kernel builds</b> into one APK and picks at startup by reading the CPU's feature list — an i8mm chip loads the i8mm build, a dotprod-only chip loads the dotprod one. Detection replaces assumption at the binary level too.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Tokens per joule</span>
+        <p>Android exposes the battery's voltage and current. Sample them during a benchmark, multiply → watts; divide token rate by watts → <b>tokens per joule</b>. Speed per unit of energy — the number that decides whether a config is actually worth it on a battery. A config 5% faster but 30% hungrier is a bad phone config.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">Median of five</span>
+        <p>A phone is a noisy lab: background apps, thermal state, and battery level all nudge the numbers. Every measurement is repeated five times and the <b>median</b> reported, so a single hiccup — or a single lucky run — can never become a headline.</p>
+      </div>
+      <div class="g-card fade">
+        <span class="k">The attribution ladder</span>
+        <p>If you change the compiler flags <i>and</i> a library <i>and</i> the thread count and things get faster, you've learned nothing. The ladder changes <b>exactly one lever per rung</b>, so every gain has an owner. It's how we can say the 4.94× belongs to the flags — and that the library everyone credits added ≈0%.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="arch" class="band grey">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">Chapter three</div>
       <h2>From TypeScript<br>down to the silicon.</h2>
       <p class="lead">Each layer talks only to the one below it.</p>
     </div>
     <div class="arch fade">
       <div class="arch-row">
-        <div class="arch-label">App · TS</div>
-        <div class="arch-box"><span class="t">React Native app</span><div class="d">Chat interface, the optimization lab, model downloads. Every line of authored code is TypeScript — by design, no C++ or Kotlin is written in this project.</div></div>
+        <div class="arch-label">Screens · TS</div>
+        <div class="arch-box"><span class="t">Five screens — Device · Models · Tune · Chat · Lab</span><div class="d">React Native, every line TypeScript — by design, no C++ or Kotlin is written in this project. Device reads the silicon, Models manages GGUF downloads, Tune sweeps and applies, Chat runs the winner offline, Lab holds the evidence.</div></div>
+      </div>
+      <div class="arch-conn"><span></span></div>
+      <div class="arch-row">
+        <div class="arch-label">Core · TS</div>
+        <div class="arch-box"><span class="t">Tuning core</span><div class="d">Detection, sweep planning, scoring, power sampling, persistence — the loop that turns a phone's core map into an applied configuration. Mirrors the harness methodology so in-app numbers and published numbers are directly comparable.</div></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
         <div class="arch-label">Bindings</div>
-        <div class="arch-box"><span class="t">llama.rn</span><div class="d">A prebuilt bridge letting JavaScript call llama.cpp. The open question: do its prebuilt binaries carry the arch flags? If not, every React Native LLM app ships the slow path.</div></div>
+        <div class="arch-box"><span class="t">llama.rn</span><div class="d">A prebuilt bridge letting TypeScript call llama.cpp. We audited its binaries: they pack <b>six arm64 kernel builds</b> and dispatch at runtime by CPU feature — an i8mm chip loads <code>v8_2_dotprod_i8mm</code>, a dotprod-only chip loads <code>v8_2_dotprod</code>. The fast path ships; detection decides which one runs.</div></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
         <div class="arch-label">Engine · C++</div>
-        <div class="arch-box"><span class="t">llama.cpp</span><div class="d">Loads the GGUF model and runs the matmuls. We compile it ourselves with the NDK — once per configuration under test. Seven variants so far.</div></div>
+        <div class="arch-box"><span class="t">llama.cpp</span><div class="d">Loads the GGUF model and runs the matmuls. In the app it arrives prebuilt inside llama.rn; for the published evidence we also compile it ourselves with the NDK — seven variants, one lever changed at a time.</div></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
         <div class="arch-label">Silicon</div>
-        <div class="arch-box silicon"><span class="t">Arm CPU — Dimensity 7200 Pro</span><div class="d">2× Cortex-A715 at 2.8 GHz, 6× Cortex-A510 at 2.0 GHz, with dotprod, i8mm and SVE2. The fixed reality every layer above must adapt to.</div></div>
+        <div class="arch-box silicon"><span class="t">Arm CPU — whichever one is in the phone</span><div class="d">A feature list (dotprod? i8mm? SVE2? SME2?) and a core layout (how many big cores, at which indices) that differ on every device. The fixed reality every layer above must adapt to — read at runtime from <code>/proc/cpuinfo</code> and cpufreq, never assumed.</div></div>
       </div>
     </div>
-    <p class="body-2 fade">Three support components never ship in the app, but produce all the evidence:</p>
+    <div class="stack fade">
+      <h3>Inside the app: one loop, six stages</h3>
+      <p class="body-2">This is the product in one diagram — the pipeline the Tune tab runs, with the TypeScript module responsible for each stage.</p>
+      <div class="pipe">
+        <div class="pipe-step"><span class="pn">01</span><div class="pt">Detect</div><div class="pd">Read <code>/proc/cpuinfo</code> + cpufreq: features, clusters, where the big cores sit.</div><span class="pf">lib/cpu.ts</span></div>
+        <div class="pipe-step"><span class="pn">02</span><div class="pt">Plan</div><div class="pd">Thread candidates derived from the core map × flash attention × KV-cache quant.</div><span class="pf">lib/tuner.ts</span></div>
+        <div class="pipe-step"><span class="pn">03</span><div class="pt">Bench</div><div class="pd">llama-bench-style run per config, battery power sampled throughout.</div><span class="pf">lib/llama.ts · battery.ts</span></div>
+        <div class="pipe-step"><span class="pn">04</span><div class="pt">Score</div><div class="pd">65% decode + 35% prefill — chat feel first; energy shown alongside.</div><span class="pf">lib/tuner.ts</span></div>
+        <div class="pipe-step"><span class="pn">05</span><div class="pt">Apply</div><div class="pd">The winner becomes the live engine settings, persisted across restarts.</div><span class="pf">store.ts</span></div>
+        <div class="pipe-step"><span class="pn">06</span><div class="pt">Chat</div><div class="pd">Offline assistant on the tuned config — measured tok/s on every reply.</div><span class="pf">ChatScreen.tsx</span></div>
+      </div>
+    </div>
+    <p class="body-2 fade">The app ships alone. Everything else in the repository exists to produce and audit the evidence:</p>
     <div class="tree fade">
 <span class="dir">armcreate/</span><br>
-├── <span class="dir">app/</span>              <span class="cm">← the React Native app (next phase)</span><br>
+├── <span class="dir">app/</span>              <span class="cm">← the React Native app — five screens + the tuning core (src/lib/)</span><br>
 ├── <span class="dir">harness/</span>          <span class="cm">← bench.py — pushes builds + model to the phone, times them, saves JSON</span><br>
+├── <span class="dir">tools/</span>            <span class="cm">← Python utilities — distill results/ into the app's bundled Lab evidence</span><br>
 ├── <span class="dir">models/</span>           <span class="cm">← the .gguf compressed models (Q4_0 · Q4_K_M · Q8_0)</span><br>
 ├── <span class="dir">results/</span>          <span class="cm">← raw measurement JSON — the evidence behind every number</span><br>
 ├── <span class="dir">vendor/llama.cpp/</span> <span class="cm">← engine source + 7 compiled build variants</span><br>
-├── <span class="dir">site/</span>             <span class="cm">← this website</span><br>
-├── PLAN.md            <span class="cm">← the project plan</span><br>
-└── CLAUDE.md          <span class="cm">← context so AI-assisted sessions resume with full state</span>
+├── <span class="dir">docs/</span>             <span class="cm">← benchmark schema · how to add a new phone</span><br>
+└── <span class="dir">site/</span>             <span class="cm">← this website</span>
     </div>
   </div>
 </section>
 
-<section id="components" class="band grey">
+<section id="components" class="band">
   <div class="col stack lg">
     <div class="center stack fade">
-      <div class="kicker">Chapter three</div>
+      <div class="kicker">Chapter four</div>
       <h2>What's used,<br>and why.</h2>
     </div>
     <div class="table-scroll fade">
@@ -275,22 +385,22 @@
         <tbody>
           <tr><td class="name">llama.cpp</td><td>C++ inference engine for GGUF models</td><td class="why">The industry standard for CPU inference. Builds anywhere, and exposes every knob we need to test — arch flags, KleidiAI, repack, threads.</td></tr>
           <tr><td class="name">React Native</td><td>Cross-platform app framework</td><td class="why">The builder writes only TypeScript and Python. RN keeps 100% of authored code in TS — and PocketPal (500K+ installs) proves the stack works for exactly this.</td></tr>
-          <tr><td class="name">llama.rn</td><td>React Native bindings for llama.cpp</td><td class="why">Lets the TypeScript app call the C++ engine without writing native code. Whether its prebuilt binaries carry the arch flags is an open question — possibly the project's biggest finding.</td></tr>
+          <tr><td class="name">llama.rn</td><td>React Native bindings for llama.cpp</td><td class="why">Lets the TypeScript app call the C++ engine without writing native code. Audited: its prebuilts pack six arm64 kernel builds and dispatch by CPU feature at runtime — the same detection-over-assumption story the harness proves with explicit per-arch builds.</td></tr>
           <tr><td class="name">Android NDK</td><td>Cross-compiler toolchain</td><td class="why">Builds arm64 phone binaries on an x86 Windows laptop. No Mac, no emulator.</td></tr>
           <tr><td class="name">adb</td><td>USB command line to the phone</td><td class="why">Push binaries, run benchmarks, read CPU features and battery state — scriptable and reproducible, with no app install needed.</td></tr>
           <tr><td class="name">harness/bench.py</td><td>The measurement scientist</td><td class="why">Enforces rigour automatically: five repetitions, cooldowns between variants, battery and thermal logging, raw JSON out. Anyone reruns every number with one command.</td></tr>
           <tr><td class="name">GGUF models</td><td>Pre-quantized Llama 3.2 1B</td><td class="why">Small enough to iterate quickly, permissively licensed, and available in the exact quant formats the sweep compares.</td></tr>
-          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict on this chip: neutral for Q4_0 — kept in the sweep because it may matter on other quants and SME2 silicon.</td></tr>
+          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict on the silicon measured so far: neutral for Q4_0 — kept in the sweep because it may matter on other quants and on SME2 chips.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </section>
 
-<section id="method" class="band">
+<section id="method" class="band grey">
   <div class="col stack lg">
     <div class="center stack fade">
-      <div class="kicker">Chapter four</div>
+      <div class="kicker">Chapter five</div>
       <h2>Seven builds.<br>One variable at a time.</h2>
       <p class="lead">You can't attribute a speedup unless exactly one thing changes.</p>
     </div>
@@ -315,11 +425,41 @@
   </div>
 </section>
 
+<section id="optimizations" class="band">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">Chapter six</div>
+      <h2>The optimizations —<br>what was done, what it achieved.</h2>
+      <p class="lead">Three families. Make the machine code match the silicon. Make the memory traffic smaller. Put the work on the right cores. Everything below is one of the three — plus the energy meter that judges them all.</p>
+    </div>
+    <div class="table-scroll fade">
+      <table>
+        <thead><tr><th>Optimization</th><th>Family · when</th><th>What it actually does</th><th>Achieved (Nothing 2a)</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Arch flags</td><td class="why">machine code · build-time</td><td class="why"><code>-march=…+dotprod+i8mm</code> lets the compiler emit the chip's matrix instructions instead of lowest-common-denominator arm64.</td><td><strong>4.94×</strong> prefill, <strong>1.34×</strong> decode</td></tr>
+          <tr><td class="name">Weight repacking</td><td class="why">memory traffic · load-time</td><td class="why">Rearranges quantized weight blocks at model load into the tile order the SIMD units consume — streaming reads instead of scattered ones.</td><td class="why">Folded into the 4.94×; the <code>norepack</code> builds isolate it</td></tr>
+          <tr><td class="name">KleidiAI</td><td class="why">machine code · build-time</td><td class="why">Arm's hand-written matmul microkernels, swapped in for llama.cpp's own compiled paths.</td><td><strong>≈0%</strong> for Q4_0 — the honest negative</td></tr>
+          <tr><td class="name">Quantization</td><td class="why">memory traffic · model format</td><td class="why">Weights stored at ~4 bits instead of 16. Decode is memory-bound, so less data ≈ more tokens per second — and a 1B model fits in ~700 MB.</td><td class="why">Enables everything; Q4_0 vs Q4_K_M vs Q8_0 sweep is next</td></tr>
+          <tr><td class="name">Thread count</td><td class="why">scheduling · runtime, in-app</td><td class="why">Derives candidates from the phone's real core map instead of "all cores". Little cores stall the team; fewer, faster workers win.</td><td><strong>+25%</strong> decode (2 threads vs 6)</td></tr>
+          <tr><td class="name">Flash attention</td><td class="why">memory traffic · runtime, in-app</td><td class="why">Reorders attention into cache-sized tiles — same math, fewer trips to RAM.</td><td class="why">Swept per device by the tuner</td></tr>
+          <tr><td class="name">KV cache q8_0</td><td class="why">memory traffic · runtime, in-app</td><td class="why">Quantizes the conversation's memory to 8-bit, roughly halving its RAM footprint as the chat grows.</td><td class="why">Swept per device by the tuner</td></tr>
+          <tr><td class="name">Tokens per joule</td><td class="why">measurement · runtime, in-app</td><td class="why">Samples the battery's power rails during every benchmark point, so efficiency ranks configs alongside speed.</td><td class="why">Reported per config where the kernel exposes rails</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout fade">
+      <span class="t">The division of labour</span>
+      <p><b>Build-time levers</b> (arch flags, repacking, KleidiAI) are proved by the harness and arrive in the app pre-baked inside llama.rn's feature-dispatched kernels. <b>Runtime levers</b> (threads, flash attention, KV quant) are the ones no binary can decide in advance — they depend on the individual phone, so the app measures them there. The headline numbers came from the first family; the product is the second.</p>
+    </div>
+  </div>
+</section>
+
 <section id="findings" class="band grey">
   <div class="col stack lg">
     <div class="center stack fade">
-      <div class="kicker">Chapter five</div>
-      <h2>What the phone<br>actually said.</h2>
+      <div class="kicker">Chapter seven</div>
+      <h2>What the silicon<br>actually said.</h2>
+      <p class="lead">Results are per device. This is the one device through the harness so far — an i8mm-capable Armv9 chip (MediaTek Dimensity 7200 Pro, in a Nothing Phone 2a). A chip without i8mm will tell a different story, and gets its own table when it is actually measured — not before.</p>
     </div>
     <div class="table-scroll fade">
       <table>
@@ -333,12 +473,12 @@
         </tbody>
       </table>
     </div>
-    <p class="body-2 fade">And the thread-count result: decode at 2 threads reaches <strong>17.3 tok/s</strong> — landing on the two fast A715 cores — while 6 threads manages only <strong>13.8</strong>. More parallelism is <em>worse</em> when the extra workers are slow cores.</p>
+    <p class="body-2 fade">And the thread-count result: decode at 2 threads reaches <strong>17.3 tok/s</strong> — landing on the two big cores — while 6 threads manages only <strong>13.8</strong>. More parallelism is <em>worse</em> when the extra workers are little cores. The best thread count is therefore a function of the core layout, which is a function of the phone.</p>
     <div class="callout fade">
       <span class="t">Honest caveats</span>
-      <p>These are single-session runs with roughly 5–8% thermal variance; proper error bars need more repetitions before the claims go into a submission. Everything here is one chip (Dimensity 7200 Pro), one model (Llama 3.2 1B), one quant family. "KleidiAI adds nothing" means <em>on this hardware, for this format</em> — on SME2 silicon or other quants the answer may flip. Which is precisely why the product measures instead of assuming.</p>
+      <p>These are single-session runs with roughly 5–8% thermal variance; proper error bars need more repetitions before the claims go into a submission. And this is <strong>one chip, one model, one quant family</strong> — a sample of one. "KleidiAI adds nothing" means <em>on this hardware, for this format</em>; on SME2 silicon, on a dotprod-only chip, or with other quants the answer may flip. Nothing here is presented as a law of Arm phones. Which is precisely why the product ships a measurement loop instead of a lookup table — and why every additional device we test gets published, including the ones that disagree.</p>
     </div>
-    <p class="body-2 fade">Next: the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0, downloaded and queued), energy per token via the battery sensor, big.LITTLE speculative decoding, and the llama.rn binary audit.</p>
+    <p class="body-2 fade">Next: more devices through the same harness — each one's ladder published beside this one, whatever it says — plus the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0), energy per token via the battery sensor, and big.LITTLE speculative decoding. The llama.rn binary audit is done — its prebuilts carry the fast kernels and dispatch by feature, which is why the app can tune runtime levers instead of recompiling.</p>
   </div>
 </section>
 
@@ -352,10 +492,10 @@
 
 <footer>
   <div class="col">
-    <p class="small">PocketTune — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track. Open source under MIT. All measurements taken on a Nothing Phone 2a (MediaTek Dimensity 7200 Pro); raw data in <code>results/</code>.</p>
+    <p class="small">PocketTune — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track. Open source under MIT. Every published figure is labelled with the phone that produced it and traces to raw JSON in <code>results/</code>. No number on this site comes from an emulator.</p>
     <div class="row">
-      <a href="index.html">Overview</a>
-      <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
+      <a href="index.html">Home</a>
+      <a href="https://github.com/ayanbag/pockettune" title="placeholder link">GitHub</a>
       <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge</a>
       <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>
     </div>

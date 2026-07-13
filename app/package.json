@@ -15,6 +15,7 @@
     "llama.rn": "^0.12.5",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-device-info": "^15.0.2",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-svg": "^15.15.5",
     "zustand": "^5.0.14"

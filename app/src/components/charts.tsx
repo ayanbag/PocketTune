@@ -101,7 +101,8 @@ export function HBars({
           {data.map((d, i) => {
             const y = i * rowH;
             const w = Math.max((d.value / max) * (width - valueSpace), 2);
-            const color = d.color ?? theme.series[0];
+            // Single-series magnitude default: the (validated) copper accent.
+            const color = d.color ?? theme.accent;
             const faded = data.some(x => x.emphasized) && !d.emphasized;
             return (
               <React.Fragment key={d.label + i}>
@@ -286,6 +287,83 @@ export function LineChart({
       )}
       {series.length > 1 && (
         <Legend theme={theme} items={series.map(s => ({ label: s.name, color: s.color }))} />
+      )}
+    </View>
+  );
+}
+
+// ------------------------------------------------------------------ Sparkline
+
+/**
+ * Compact single-series trend: 2px line, endpoint marker ringed in surface,
+ * end value in ink (never the series color). No axes — the surrounding text
+ * names the metric; a lone baseline grounds the shape.
+ */
+export function Sparkline({
+  theme,
+  values,
+  height = 36,
+  color,
+  unit,
+}: {
+  theme: Theme;
+  values: number[];
+  height?: number;
+  color?: string;
+  unit?: string;
+}) {
+  const [width, setWidth] = useState(0);
+  const stroke = color ?? theme.accent;
+  const padR = unit ? 58 : 40;
+  const padY = 6;
+  const max = Math.max(...values, 0.001);
+  const min = Math.min(...values, 0);
+  const span = max - min || 1;
+  const plotW = width - padR - 4;
+  const xAt = (i: number) =>
+    4 + (values.length > 1 ? (i / (values.length - 1)) * plotW : plotW / 2);
+  const yAt = (v: number) => padY + (1 - (v - min) / span) * (height - padY * 2);
+  const last = values[values.length - 1];
+
+  if (!values.length) return null;
+  return (
+    <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ height }}>
+      {width > 0 && (
+        <Svg width={width} height={height}>
+          <Line
+            x1={4}
+            y1={height - padY + 3}
+            x2={width - padR + 24}
+            y2={height - padY + 3}
+            stroke={theme.baseline}
+            strokeWidth={1}
+          />
+          <Polyline
+            points={values.map((v, i) => `${xAt(i)},${yAt(v)}`).join(' ')}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Circle
+            cx={xAt(values.length - 1)}
+            cy={yAt(last)}
+            r={4}
+            fill={stroke}
+            stroke={theme.surface}
+            strokeWidth={2}
+          />
+          <SvgText
+            x={xAt(values.length - 1) + 10}
+            y={yAt(last) + 4}
+            fill={theme.inkPrimary}
+            fontSize={12}
+            fontWeight="600">
+            {fmt(last)}
+            {unit ? ` ${unit}` : ''}
+          </SvgText>
+        </Svg>
       )}
     </View>
   );

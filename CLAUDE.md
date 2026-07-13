@@ -12,17 +12,16 @@ Differentiators (decided 2026-07-12 after scouting the landscape): **tokens-per-
 
 - **The user writes only TypeScript and Python.** Never ask them to write or debug C++, Kotlin, Java, or Swift. Native components (llama.cpp, llama.rn) are used prebuilt or compiled from existing sources via documented, copy-pasteable build commands. If a native code change seems unavoidable, stop and propose an alternative first.
 - **Dev machine**: this Windows laptop (**x86, AMD Ryzen 4600H**) is the ONLY machine — the user decided against using a Mac (2026-07-12). All builds happen here: the Android NDK cross-compiles arm64 from x86, and Android Studio for Windows builds the RN app. **Never use an emulator** (x86 hosts can't run arm64 images usably); all testing and benchmarking happens on the physical phones over `adb`/USB.
-- **Test devices** (feature-verified on-device 2026-07-12 — do not re-derive, and note it is a Pixel **7a**, not a Pixel 7):
-  - **Nothing Phone 2a** — MediaTek MT6886 (Dimensity 7200 Pro), Android 16. Has `asimddp`, **`i8mm`**, `sve`/`sve2`/`svei8mm`/`bf16`. No SME2. Cores: 6× A510 @2.0 GHz (cpu0–5) + 2× A715 @2.8 GHz (**cpu6–7**). 7.24 GiB RAM.
-  - **Pixel 7a** — Google Tensor G2 (GS201), Android 16. Has `asimddp` only — **no `i8mm`, no SVE**. Tri-cluster: 4× A55 @1.80 (cpu0–3) + 2× A78 @2.35 (cpu4–5) + 2× X1 @2.85 (**cpu6–7**). 7.29 GiB RAM.
-  - Both phones put **big cores at high indices (cpu6–7)** — affinity masks must target those.
-  - Published benchmark numbers come from these phones only, never an emulator.
+- **Test device** (feature-verified on-device 2026-07-12 — do not re-derive):
+  - **Nothing Phone 2a** — MediaTek MT6886 (Dimensity 7200 Pro), Android 16. Has `asimddp`, **`i8mm`**, `sve`/`sve2`/`svei8mm`/`bf16`. No SME2. Cores: 6× A510 @2.0 GHz (cpu0–5) + 2× A715 @2.8 GHz (**cpu6–7**). 7.24 GiB RAM. Big cores sit at **high indices** — affinity masks must target cpu6–7.
+  - **This is the only phone tested so far.** Never name or characterize another device in the repo, the site, the README, or the docs until it has actually been run — no "queued", no "detection verified", no illustrative device examples. When the user tests a new phone, its `results/*.json` is the trigger to add it (site `DEVICES` array, README table, app evidence).
+  - Published benchmark numbers come from physical phones only, never an emulator.
 - **Hackathon rules**: repo must be public with an MIT or Apache-2.0 LICENSE at root; project must install and run from the README instructions alone; optimization gains must be measurable and reproducible.
 
 ## Current status (2026-07-13)
 
 - **Spike done**: llama.cpp cross-compiled (7 variants in `vendor/llama.cpp/build-android-*`), harness `harness/bench.py` works, raw results in `results/`. Headline: **4.94× prefill** from arch flags on the 2a; KleidiAI ≈ arch-flags for Q4_0 (llama.cpp's own aarch64 repack already covers it) — reported honestly as an attribution ladder.
-- **App built**: RN 0.86 + TypeScript in `app/` — four tabs (Device / Tune / Chat / Lab), llama.rn 0.12.5 **prebuilts** (no KleidiAI inside; runtime-dispatches `v8_2_dotprod_i8mm` on the 2a, `v8_2_dotprod` on the 7a). In-app tuner sweeps threads × flash-attn × KV-quant via llama.rn `bench()`, applies the best config; chat shows measured tok/s. Lab tab bundles `app/src/data/evidence.json` (regenerate: `uv run tools/make_app_evidence.py` after results change).
+- **App built**: RN 0.86 + TypeScript in `app/` — four tabs (Device / Tune / Chat / Lab), llama.rn 0.12.5 **prebuilts** (no KleidiAI inside; runtime-dispatches by CPU feature — `v8_2_dotprod_i8mm` on the 2a, `v8_2_dotprod` on a dotprod-only chip). In-app tuner sweeps threads × flash-attn × KV-quant via llama.rn `bench()`, applies the best config; chat shows measured tok/s. Lab tab bundles `app/src/data/evidence.json` (regenerate: `uv run tools/make_app_evidence.py` after results change).
 - **Windows build gotchas**: llama.rn's postinstall spawns `tar` — Git's GNU tar fails on `C:\` paths; prepend a dir containing only System32's `tar.exe` to PATH before `npm install`. Gradle needs `JAVA_HOME=D:\Softwares\Android Studio\jbr`. `reactNativeArchitectures=arm64-v8a` is set in `app/android/gradle.properties` — do not re-add other ABIs.
 - Remaining (see PLAN.md compressed schedule): on-device app verification, quantization-sweep reruns, demo video, Devpost submission.
 
@@ -43,7 +42,7 @@ All installed and on PATH — do not re-check existence, just use:
 1. Scaffold the repo: `git init`, MIT `LICENSE`, `README.md` (project pitch + placeholder setup section), `.gitignore` (Node + Android + Python + `*.gguf`), folders: `app/` (React Native), `harness/` (adb-driven benchmark scripts, TS or Python), `tools/` (Python quantization scripts), `docs/`, `results/`.
 2. Run the **feasibility spike** (this de-risks everything — do it before any app code):
    - ~~Check `adb`~~ ✅ done 2026-07-12: both phones connect and are authorized; CPU features confirmed (see Test devices above).
-   - Cross-compile llama.cpp for Android on this Windows machine with the NDK (CMake + NDK toolchain file) and `-DGGML_CPU_KLEIDIAI=ON`, two targets: `armv9-a` (Nothing 2a) and `armv8.2-a+dotprod` (Pixel 7). Base the steps on Arm's learning path (it assumes macOS/Linux — adapt paths and shell for Windows): https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/performance_llama_cpp_sme2/
+   - Cross-compile llama.cpp for Android on this Windows machine with the NDK (CMake + NDK toolchain file) and `-DGGML_CPU_KLEIDIAI=ON`, two targets: `armv9-a` (the 2a) and `armv8.2-a+dotprod` (a dotprod-only chip). Base the steps on Arm's learning path (it assumes macOS/Linux — adapt paths and shell for Windows): https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/performance_llama_cpp_sme2/
    - Script pushing `llama-bench` + a small GGUF (Llama 3.2 1B Q4_0) to `/data/local/tmp` via adb and running it with KleidiAI on vs off, capturing JSON output into `results/`.
    - Success criterion: measurable KleidiAI speedup on the 2a; numbers recorded for both phones.
 3. Only after the spike passes, start the RN app skeleton with `llama.rn` (verify whether its prebuilt binaries enable KleidiAI; if not, it's a Gradle/CMake flag change — never new native code).

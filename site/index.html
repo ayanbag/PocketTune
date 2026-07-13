@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PocketTune — Your phone is 5× faster than your AI thinks.</title>
 <meta name="description" content="PocketTune finds the fastest local-LLM configuration for your exact Arm chip — measured on real hardware, not assumed. Arm Create: AI Optimization Challenge 2026, Mobile AI Track.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231d1d1f'/><text y='.8em' font-size='56' x='24' fill='%23ffffff'>⏚</text></svg>">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   /* ─────────── PocketTune · Apple design system ─────────── */
   :root {
@@ -60,6 +61,7 @@
 
   /* full-bleed bands, Apple's narrow content column */
   .band { width: 100%; }
+  section[id] { scroll-margin-top: 80px; }
   .band.grey { background: var(--bg-alt); }
   .col { max-width: 980px; margin: 0 auto; padding: 100px 22px; }
 
@@ -103,21 +105,38 @@
   .center .actions { justify-content: center; }
   a:focus-visible, summary:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; border-radius: 6px; }
 
-  /* nav — Apple's thin translucent bar */
+  /* nav — Apple's translucent bar */
   nav {
-    position: sticky; top: 0; z-index: 30; height: 48px;
+    position: sticky; top: 0; z-index: 30; height: 68px;
     background: var(--nav-bg);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid color-mix(in srgb, var(--hair) 60%, transparent);
   }
-  .nav-inner { max-width: 1024px; margin: 0 auto; height: 100%; padding: 0 22px; display: flex; align-items: center; gap: 28px; }
-  .brand { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
-  .brand .mk { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 12px; }
-  nav .links { margin-left: auto; display: flex; gap: 26px; align-items: center; }
-  nav .links a { font-size: 12px; color: var(--ink); text-decoration: none; opacity: .85; }
+  .nav-inner { max-width: 1100px; margin: 0 auto; height: 100%; padding: 0 22px; display: flex; align-items: center; gap: 30px; }
+  .brand { font-family: var(--display); font-size: 20px; font-weight: 600; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+  .brand .mk { width: 28px; height: 28px; border-radius: 8px; display: block; }
+  nav .links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+  nav .links a { font-size: 15px; color: var(--ink); text-decoration: none; opacity: .85; letter-spacing: -0.01em; }
   nav .links a:hover { opacity: 1; color: var(--link); }
-  @media (max-width: 640px) { nav .links a.hide-sm { display: none; } }
+  /* highlighted nav actions */
+  nav .links a.nav-cta {
+    opacity: 1; font-weight: 500; padding: 8px 16px; border-radius: 980px;
+    display: inline-flex; align-items: center; gap: 7px; line-height: 1;
+    transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+  nav .links a.nav-cta.ghost { color: var(--link); border: 1px solid color-mix(in srgb, var(--link) 45%, transparent); }
+  nav .links a.nav-cta.ghost:hover { background: color-mix(in srgb, var(--link) 10%, transparent); border-color: var(--link); transform: scale(1.03); }
+  nav .links a.nav-cta.solid { background: var(--blue); color: #fff; border: 1px solid var(--blue); }
+  nav .links a.nav-cta.solid:hover { background: var(--blue-hover); color: #fff; transform: scale(1.03); }
+  nav .links a.nav-cta svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
+  @media (max-width: 860px) { nav .links a.hide-sm { display: none; } }
+  @media (max-width: 640px) {
+    nav { height: 60px; }
+    nav .links { gap: 12px; }
+    nav .links a.nav-cta { padding: 7px 13px; font-size: 14px; }
+    nav .links a.nav-cta.ghost.hide-xs { display: none; }
+  }
 
   /* fade-up on scroll — Apple's signature */
   .fade { opacity: 0; transform: translateY(30px); }
@@ -142,6 +161,10 @@
   .stat .v small { font-size: .5em; font-weight: 600; }
   .stat .l { font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.33; }
   .stat .t { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+  .narrow-60 { max-width: 60ch; margin-inline: auto; }
+  .stats-note { margin-top: 40px; max-width: 66ch; margin-inline: auto; }
+  .stats-note a { color: var(--link); text-decoration: none; }
+  .stats-note a:hover { text-decoration: underline; }
 
   /* cards */
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
@@ -161,6 +184,40 @@
   .band.grey .panel { background: var(--bg); }
   .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--green); }
   .badge::before { content: "✓"; }
+
+  /* per-device evidence */
+  .dev-head { display: flex; flex-direction: column; gap: 10px; }
+  .dev-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .dev-title .soc { font-family: var(--display); font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .dev-title .phone { font-size: 15px; color: var(--ink-3); }
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0; padding: 3px 9px; border-radius: 980px; background: var(--code-bg); color: var(--ink-2); }
+  .chip.has { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+  .chip.lacks { color: var(--ink-3); text-decoration: line-through; }
+  .dev-meta { margin-top: 8px; font-size: 15px; line-height: 1.5; }
+  .coverage { max-width: 68ch; }
+  .coverage b { color: var(--ink); font-weight: 600; }
+
+  /* device carousel — one slide per benchmarked phone */
+  .carousel { display: flex; flex-direction: column; gap: 18px; }
+  .dev-track {
+    display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory;
+    scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .dev-track::-webkit-scrollbar { display: none; }
+  .dev-track > .panel { flex: 0 0 100%; scroll-snap-align: center; }
+  .carousel-bar { display: flex; align-items: center; gap: 14px; }
+  .dots { display: flex; gap: 8px; margin-right: auto; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--hair); transition: background .25s ease, transform .25s ease; }
+  .dot[aria-current="true"] { background: var(--blue); transform: scale(1.25); }
+  .arrow {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--hair);
+    background: var(--card); color: var(--ink); font-size: 17px; line-height: 1; cursor: pointer;
+    display: grid; place-items: center; transition: background .2s ease, border-color .2s ease, opacity .2s ease;
+  }
+  .band.grey .arrow { background: var(--bg); }
+  .arrow:hover:not(:disabled) { border-color: var(--link); color: var(--link); }
+  .arrow:disabled { opacity: .35; cursor: default; }
   .chart { display: flex; flex-direction: column; gap: 20px; }
   .legend { display: flex; gap: 22px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
   .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
@@ -213,6 +270,111 @@
   .stack { display: flex; flex-direction: column; gap: 22px; }
   .stack.lg { gap: 34px; }
 
+  /* ── architecture: 3D layer stack, labels centered on each plate ──
+     Geometry: the scene is tilted rotateX(57°), so a plate raised Z px rises
+     Z·sin(57°) ≈ 0.84·Z on screen — with --gap-z: 58px that's --dy: 49px per
+     layer. Labels sit OUTSIDE the 3D scene, in a flat overlay painted on top:
+     inside it, the plate above would slice straight through them. */
+  .arch-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 34px; align-items: center; }
+  .scene {
+    /* --half = the tilted stack's on-screen half-width (--size · √2 / 2) —
+       where every plate's left vertex sits, and where the leader lines end.
+       --dy = --gap-z · sin(57°): how far one layer rises on screen. */
+    --size: 200px; --gap-z: 50px; --dy: 42px; --half: 141px;
+    min-height: 470px; display: flex; align-items: center; justify-content: center;
+  }
+  /* labels anchor to THIS box (the stack's own footprint), not to the scene —
+     so they hug the plates no matter where flexbox puts the composition */
+  .stack-wrap { position: relative; width: var(--size); aspect-ratio: 1; transform: translateY(40px); }
+  .stack3d {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d; transform: rotateX(57deg) rotateZ(-43deg);
+  }
+  @keyframes drift3d {
+    0%, 100% { transform: rotateX(57deg) rotateZ(-40deg); }
+    50%      { transform: rotateX(57deg) rotateZ(-46deg); }
+  }
+  .stack3d.live { animation: drift3d 16s ease-in-out infinite; }
+  .plate {
+    position: absolute; inset: 0; border-radius: 24px;
+    background: var(--card); border: 1px solid var(--hair);
+    box-shadow: 0 30px 60px -34px rgba(0,0,0,.4);
+    transform: translateZ(calc(var(--i) * var(--gap-z)));
+    transition: transform .45s cubic-bezier(.28,.11,.32,1), border-color .3s ease;
+  }
+  .band.grey .plate { background: var(--bg); }
+  .plate.hot { transform: translateZ(calc(var(--i) * var(--gap-z) + 26px)); border-color: var(--blue); }
+  .plate.silicon, .band.grey .plate.silicon { background: var(--blue); border-color: var(--blue); }
+
+  /* labels — flat overlay beside the stack, a leader line to each plate's
+     left vertex. Lines shorten toward the bottom, so the pills staircase. */
+  .plate-labels { position: absolute; inset: 0; pointer-events: none; }
+  .lbl {
+    position: absolute; top: 50%; right: calc(50% + var(--half) + 6px);
+    display: flex; align-items: center;
+    transform: translateY(calc(-50% - var(--i) * var(--dy) + var(--lift, 0px)));
+    transition: transform .45s cubic-bezier(.28,.11,.32,1);
+  }
+  .lbl .txt {
+    display: inline-block;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0; white-space: nowrap;
+    color: var(--ink-2); background: var(--card); border: 1px solid var(--hair);
+    padding: 6px 14px; border-radius: 12px;
+    box-shadow: 0 6px 18px -10px rgba(0,0,0,.3);
+    transition: border-color .3s ease, color .3s ease;
+  }
+  .band.grey .lbl .txt { background: var(--bg); }
+  /* the leader line, reaching from the pill to the plate's left corner */
+  .lbl::after {
+    content: ""; width: calc(16px + var(--i) * 6px); height: 1px;
+    background: var(--hair); transition: background .3s ease;
+  }
+  .lbl.hot { --lift: -22px; }
+  .lbl.hot .txt { border-color: var(--blue); color: var(--blue); }
+  .lbl.hot::after { background: var(--blue); }
+  .lbl.silicon .txt, .band.grey .lbl.silicon .txt { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .lbl.silicon.hot .txt, .band.grey .lbl.silicon.hot .txt { border-color: #fff; color: #fff; }
+
+  .arch-list { display: flex; flex-direction: column; }
+  .arch-item { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 17px 16px; border-radius: 16px; cursor: default; transition: background .25s ease; }
+  .arch-item:hover, .arch-item.hot { background: var(--bg-alt); }
+  .band.grey .arch-item:hover, .band.grey .arch-item.hot { background: var(--bg); }
+  .arch-item .n { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--blue); padding-top: 2px; }
+  .arch-item h3 { font-size: 17px; }
+  .arch-item p { font-size: 14.5px; color: var(--ink-2); line-height: 1.5; margin-top: 3px; }
+  @media (max-width: 1080px) and (min-width: 861px) {
+    .scene { --size: 176px; --gap-z: 44px; --dy: 37px; --half: 124px; min-height: 420px; }
+    .lbl .txt { font-size: 11px; padding: 5px 11px; }
+    .lbl::after { width: calc(12px + var(--i) * 5px); }
+  }
+  @media (max-width: 860px) {
+    .arch-grid { grid-template-columns: 1fr; gap: 10px; }
+    .scene { min-height: 440px; }
+  }
+  @media (max-width: 480px) {
+    .scene { --size: 148px; --gap-z: 42px; --dy: 35px; --half: 105px; min-height: 370px; }
+    .lbl { right: calc(50% + var(--half)); }
+    .lbl .txt { font-size: 10px; padding: 4px 8px; }
+    .lbl::after { width: calc(8px + var(--i) * 4px); }
+  }
+
+  /* ── optimization ladder ── */
+  .opt-frame { display: flex; flex-direction: column; }
+  .opt-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) 190px; gap: 20px; padding: 24px 6px; border-bottom: 1px solid var(--hair); }
+  .opt-row:last-child { border-bottom: none; }
+  .opt-kind { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); line-height: 1.5; }
+  .opt-kind .when { display: block; margin-top: 5px; font-weight: 500; text-transform: none; letter-spacing: -0.01em; color: var(--blue); }
+  .opt-body h3 { font-size: 17px; }
+  .opt-body p { font-size: 15px; color: var(--ink-2); line-height: 1.5; margin-top: 4px; }
+  .opt-result { text-align: right; }
+  .opt-result .v { font-family: var(--display); font-weight: 600; font-size: 26px; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .opt-result .v.win { color: var(--green); }
+  .opt-result .d { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+  @media (max-width: 720px) {
+    .opt-row { grid-template-columns: 1fr; gap: 8px; }
+    .opt-result { text-align: left; }
+  }
+
   footer { background: var(--bg-alt); border-top: 1px solid var(--hair); }
   footer .col { padding: 34px 22px; display: flex; flex-direction: column; gap: 10px; }
   footer .row { display: flex; gap: 22px; flex-wrap: wrap; }
@@ -224,14 +386,22 @@
 
 <nav>
   <div class="nav-inner">
-    <a class="brand" href="index.html"><span class="mk">⏚</span>PocketTune</a>
+    <a class="brand" href="index.html"><img class="mk" src="icon.svg" alt="" width="28" height="28">PocketTune</a>
     <div class="links">
-      <a href="#evidence">Evidence</a>
+      <a href="#evidence" class="hide-sm">Evidence</a>
       <a href="#findings" class="hide-sm">Findings</a>
       <a href="#how" class="hide-sm">How it works</a>
-      <a href="learn.html">Inside</a>
-      <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
-      <a href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download</a>
+      <a href="#architecture" class="hide-sm">Architecture</a>
+      <a href="#optimizations" class="hide-sm">Optimizations</a>
+      <a class="nav-cta ghost hide-xs" href="learn.html">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2C6.8 2.3 5.3 1.9 3.4 1.9c-.7 0-1.4.1-2 .2a.6.6 0 0 0-.5.6v9.7c0 .4.4.7.8.6.5-.1 1.1-.2 1.7-.2 1.8 0 3.2.4 4.2 1.3.2.2.6.2.8 0 1-.9 2.4-1.3 4.2-1.3.6 0 1.2.1 1.7.2.4.1.8-.2.8-.6V2.7a.6.6 0 0 0-.5-.6c-.6-.1-1.3-.2-2-.2-1.9 0-3.4.4-4.6 1.3Zm-.6 9.4c-1-.6-2.3-.9-4-.9-.4 0-.8 0-1.2.1V3.2c.4 0 .8-.1 1.2-.1 1.7 0 3 .4 4 1.1v8.4Z"/></svg>
+        Learn
+      </a>
+      <a class="nav-cta ghost" href="https://github.com/ayanbag/pockettune" title="placeholder link">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        GitHub
+      </a>
+      <a class="nav-cta solid" href="https://github.com/ayanbag/pockettune/releases/latest" title="placeholder link">Download</a>
     </div>
   </div>
 </nav>
@@ -242,7 +412,7 @@
     <h1 class="fade">Your phone is 5× faster<br>than your AI thinks.</h1>
     <p class="lead fade narrow">It finds the fastest local-LLM setup for your exact Arm chip. Then it proves it.</p>
     <div class="actions fade">
-      <a class="btn" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download the app</a>
+      <a class="btn" href="https://github.com/ayanbag/pockettune/releases/latest" title="placeholder link">Download the app</a>
       <a class="chev" href="#evidence">See the evidence</a>
     </div>
     <p class="small fade">Android · arm64 · free and open source · Arm Create : AI Optimization Challenge 2026 · Mobile AI Track</p>
@@ -260,6 +430,7 @@
       <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
       <div class="stat fade"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls. Nothing leaves the phone.</div></div>
     </div>
+    <p class="small center fade stats-note">Speed figures are the best result on the fastest device benchmarked so far, against that same device's unoptimized baseline. Every number below is labelled with the phone that produced it — <a href="#evidence">see the per-device evidence ›</a></p>
   </div>
 </section>
 
@@ -267,46 +438,11 @@
   <div class="col stack lg">
     <div class="center stack fade">
       <div class="kicker">The evidence</div>
-      <h2>One phone. One model.<br>Three builds.</h2>
-      <p class="lead">Same device, same session — only the build changes.</p>
+      <h2>Same method.<br>Every phone its own answer.</h2>
+      <p class="lead">One panel per device we've benchmarked. Same model, same workload — only the build changes.</p>
     </div>
-    <div class="panel fade">
-      <div>
-        <span class="badge">Measured on-device · 12 July 2026</span>
-        <p class="body-2" style="margin-top:8px">Llama 3.2 1B (Q4_0) on a Nothing Phone 2a — MediaTek Dimensity 7200 Pro, an Armv9 chip with <code>i8mm</code> matrix instructions. Five repetitions per configuration, two-minute cooldowns between builds. Raw JSON ships in the repo.</p>
-      </div>
-      <div class="chart" id="ladder">
-        <div class="legend">
-          <span><span class="swatch" style="background: var(--c1)"></span>generic build — no Arm feature flags</span>
-          <span><span class="swatch" style="background: var(--c2)"></span>+ <code>-march=armv8.2a+i8mm+dotprod</code></span>
-          <span><span class="swatch" style="background: var(--c3)"></span>+ KleidiAI on top</span>
-        </div>
-        <div class="cgroup">
-          <div class="cgroup-title">Prefill — reading your prompt (pp128)</div>
-          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="16.5"><span class="val">20.5 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 20.51 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="81.8"><span class="val">101.4 · 4.94×</span><span class="tip">-march=armv8.2a+i8mm+dotprod · 6 threads · 101.43 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">+ KleidiAI</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="80.7"><span class="val">100.1 · +0%</span><span class="tip">arch flags + GGML_CPU_KLEIDIAI=ON · 6 threads · 100.09 tok/s</span></div></div></div>
-        </div>
-        <div class="cgroup">
-          <div class="cgroup-title">Decode — writing the answer (tg64)</div>
-          <div class="crow"><span class="rname">generic</span><div class="barwrap"><div class="databar" style="background: var(--c1)" data-w="10.3"><span class="val">12.7 tok/s</span><span class="tip">generic arm64-v8a · 6 threads · 12.73 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">arch flags</span><div class="barwrap"><div class="databar" style="background: var(--c2)" data-w="13.7"><span class="val">17.0 · 1.34×</span><span class="tip">-march flags · 2 threads · 17.00 tok/s</span></div></div></div>
-          <div class="crow"><span class="rname">+ KleidiAI</span><div class="barwrap"><div class="databar" style="background: var(--c3)" data-w="12.6"><span class="val">15.6 · ≈0%</span><span class="tip">arch flags + KleidiAI · 2 threads · 15.61 tok/s</span></div></div></div>
-        </div>
-        <details>
-          <summary>View as table</summary>
-          <table>
-            <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>vs generic</th></tr></thead>
-            <tbody>
-              <tr><td>generic arm64-v8a</td><td>20.51</td><td>12.73</td><td>1.00×</td></tr>
-              <tr><td>-march=armv8.2a+i8mm+dotprod</td><td>101.43</td><td>17.00</td><td>4.94× / 1.34×</td></tr>
-              <tr><td>arch flags + KleidiAI</td><td>100.09</td><td>15.61</td><td>4.88× / 1.23×</td></tr>
-            </tbody>
-          </table>
-        </details>
-      </div>
-    </div>
-    <p class="body-2 fade"><strong>Read it top to bottom.</strong> The entire speedup arrives with the compiler flags — permission to use the matrix instructions the silicon already has. The specialized library adds nothing after that. Most Android builds of llama.cpp never pass those flags.</p>
+    <div id="devices" class="stack lg"></div>
+    <p class="body-2 fade"><strong>Read each ladder top to bottom.</strong> The speedup arrives with the compiler flags — permission to use the matrix instructions that particular silicon already has. Which instructions exist, and what they're worth, is a property of the chip, not of the app. That's the whole argument for measuring instead of assuming.</p>
   </div>
 </section>
 
@@ -320,20 +456,20 @@
       <div class="card fade">
         <div class="num">4.94<small>×</small></div>
         <h3>The compiler flag is the whole ballgame.</h3>
-        <p>One build flag nearly quintuples prompt processing. It simply lets the compiler emit the matrix instructions the chip already has. Most builds don't.</p>
+        <p>One build flag nearly quintuples prompt processing — it lets the compiler emit the matrix instructions the chip already has. Most Android builds never pass it. How much it buys depends on which instructions your silicon actually implements.</p>
       </div>
       <div class="card fade">
         <div class="num">+0<small>%</small></div>
-        <h3>KleidiAI adds nothing here.</h3>
-        <p>Arm's own acceleration library, tested four ways. No measurable gain on this chip for Q4_0 — once i8mm is on, plain compiled code already saturates the hardware.</p>
+        <h3>KleidiAI adds nothing — where we've looked.</h3>
+        <p>Arm's own acceleration library, tested four ways on an i8mm chip: no measurable gain for Q4_0, because plain compiled code already saturates the hardware. On other quants and other silicon it may well flip. It stays in the sweep for exactly that reason.</p>
       </div>
       <div class="card fade">
         <div class="num">2 &gt; 6</div>
         <h3>Fewer threads, faster answers.</h3>
-        <p>Decode at 2 threads: 17.3 tok/s. At 6 threads: 13.8. Two fast cores beat two fast plus six slow — the slow ones become the bottleneck everyone waits for.</p>
+        <p>Decode at 2 threads: 17.3 tok/s. At 6 threads: 13.8. The fast cores beat fast-plus-slow — the little cores become the bottleneck everyone waits for. Where the fast cores sit, and how many there are, is per phone.</p>
       </div>
     </div>
-    <p class="body-2 center fade" style="max-width:60ch">Every one contradicts what a reasonable developer would assume. That's the point: <strong>your phone's fastest configuration is an empirical question — so PocketTune answers it empirically.</strong></p>
+    <p class="body-2 center fade narrow-60">Every one contradicts what a reasonable developer would assume — and none of them generalizes across chips by default. That's the point: <strong>your phone's fastest configuration is an empirical question, so PocketTune answers it on your phone.</strong></p>
   </div>
 </section>
 
@@ -357,12 +493,125 @@
   </div>
 </section>
 
+<section id="architecture" class="band grey">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">Under the hood</div>
+      <h2>Five layers.<br>TypeScript to silicon.</h2>
+      <p class="lead">Every line we wrote is TypeScript. Every fast path below it is measured, never assumed.</p>
+    </div>
+    <div class="arch-grid fade" id="arch-scene">
+      <div class="scene">
+        <div class="stack-wrap">
+          <div class="stack3d" id="stack3d" aria-hidden="true">
+            <div class="plate silicon" data-layer="5" style="--i:0"></div>
+            <div class="plate" data-layer="4" style="--i:1"></div>
+            <div class="plate" data-layer="3" style="--i:2"></div>
+            <div class="plate" data-layer="2" style="--i:3"></div>
+            <div class="plate" data-layer="1" style="--i:4"></div>
+          </div>
+          <div class="plate-labels">
+            <span class="lbl silicon" data-layer="5" style="--i:0"><span class="txt">Arm silicon</span></span>
+            <span class="lbl" data-layer="4" style="--i:1"><span class="txt">llama.cpp · C++</span></span>
+            <span class="lbl" data-layer="3" style="--i:2"><span class="txt">llama.rn bridge</span></span>
+            <span class="lbl" data-layer="2" style="--i:3"><span class="txt">tuning core · TS</span></span>
+            <span class="lbl" data-layer="1" style="--i:4"><span class="txt">five screens · TS</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="arch-list">
+        <div class="arch-item" data-layer="1" tabindex="0">
+          <span class="n">01</span>
+          <div><h3>Five screens — Device · Models · Tune · Chat · Lab</h3>
+          <p>React Native, all TypeScript. Device reads the silicon, Models manages GGUF downloads, Tune runs the sweep and applies the winner, Chat runs it offline, Lab holds the evidence.</p></div>
+        </div>
+        <div class="arch-item" data-layer="2" tabindex="0">
+          <span class="n">02</span>
+          <div><h3>Tuning core</h3>
+          <p>Builds the sweep plan from this phone's core layout, drives the benchmarks, scores every configuration (weighted 65% decode, 35% prefill), samples battery power for tokens per joule, and persists the applied config and history.</p></div>
+        </div>
+        <div class="arch-item" data-layer="3" tabindex="0">
+          <span class="n">03</span>
+          <div><h3>llama.rn bridge</h3>
+          <p>A prebuilt binding to the engine — no native code written in this project. It ships six arm64 kernel builds and picks one at startup by reading the chip's features: i8mm silicon gets the i8mm build, a dotprod-only chip gets the dotprod build.</p></div>
+        </div>
+        <div class="arch-item" data-layer="4" tabindex="0">
+          <span class="n">04</span>
+          <div><h3>llama.cpp engine</h3>
+          <p>Loads the GGUF model and runs the matmuls. One context lives at a time — a phone doesn't have RAM for two — and every engine call is serialized, so a mid-benchmark tab switch can never corrupt a measurement.</p></div>
+        </div>
+        <div class="arch-item" data-layer="5" tabindex="0">
+          <span class="n">05</span>
+          <div><h3>Arm silicon — whichever chip is in the phone</h3>
+          <p>The ground truth: which matrix instructions exist (dotprod? i8mm? SVE2?) and where the big cores sit. Different on every phone — which is exactly why every layer above asks instead of assumes.</p></div>
+        </div>
+      </div>
+    </div>
+    <p class="body-2 center fade narrow-60">The whole stack exists to move one decision — <strong>which configuration to run</strong> — out of guesswork and into a measurement made on the phone in your hand.</p>
+  </div>
+</section>
+
+<section id="optimizations" class="band">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">The optimizations</div>
+      <h2>Seven levers.<br>Two families.</h2>
+      <p class="lead narrow-60"><strong>Build-time</strong> levers are baked into the binaries and proved by the harness. <strong>Runtime</strong> levers are what the app tunes on your phone. Every one is measured — and two of the "obvious wins" turned out to be worth nothing.</p>
+    </div>
+    <div class="opt-frame fade">
+      <div class="opt-row">
+        <div class="opt-kind">SIMD · instruction set<span class="when">Build-time</span></div>
+        <div class="opt-body"><h3>Arch-targeted compilation</h3>
+        <p><code>-march=armv8.2-a+dotprod+i8mm</code> gives the compiler permission to emit the chip's matrix-multiply instructions. Generic arm64 builds — what most apps ship — use none of them. This single flag is the largest gain in the entire project.</p></div>
+        <div class="opt-result"><div class="v win">4.94×</div><div class="d">prefill vs generic build · measured, Nothing Phone 2a</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Data layout<span class="when">Load-time</span></div>
+        <div class="opt-body"><h3>Weight repacking</h3>
+        <p>At model load, llama.cpp rearranges Q4_0 weight blocks into the tile order the i8mm instructions consume — so the SIMD units stream contiguous data instead of gathering it. Free at inference time; it costs a moment at load.</p></div>
+        <div class="opt-result"><div class="v">included</div><div class="d">folded into the 4.94×; isolated by the norepack builds in the attribution ladder</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Kernel library<span class="when">Build-time</span></div>
+        <div class="opt-body"><h3>KleidiAI microkernels</h3>
+        <p>Arm's hand-written matmul routines — the thing everyone assumes brings the speed. Tested four ways on an i8mm chip: once the compiler flags are right, plain compiled code already saturates the hardware for Q4_0. It stays in the sweep because other silicon may disagree.</p></div>
+        <div class="opt-result"><div class="v">≈0%</div><div class="d">for Q4_0 on the chip tested · the honest negative</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Quantization<span class="when">Model format</span></div>
+        <div class="opt-body"><h3>4-bit weights</h3>
+        <p>Decode speed is bounded by memory traffic, not arithmetic — the CPU mostly waits for weights to arrive from RAM. Shrinking every weight from 16 bits to ~4 cuts that traffic roughly 4×, and is what makes a 1B-parameter model fit on a phone at all.</p></div>
+        <div class="opt-result"><div class="v">~700 MB</div><div class="d">Llama 3.2 1B at Q4_0, down from ~2.3 GB at f16</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Threading<span class="when">Runtime · app</span></div>
+        <div class="opt-body"><h3>big.LITTLE-aware thread count</h3>
+        <p>More threads is <em>worse</em> when the extra workers are little cores — the whole team waits for the slowest. The app derives its thread candidates from this phone's actual core map instead of defaulting to "all of them".</p></div>
+        <div class="opt-result"><div class="v win">+25%</div><div class="d">decode, 2 threads vs 6 (17.3 → 13.8 tok/s) · measured</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Attention path<span class="when">Runtime · app</span></div>
+        <div class="opt-body"><h3>Flash attention + quantized KV cache</h3>
+        <p>Flash attention computes attention in cache-sized tiles instead of materializing the whole score matrix; a q8_0 KV cache halves the memory the growing conversation occupies. Both help some chips and hurt others — which is why they're swept, not defaulted.</p></div>
+        <div class="opt-result"><div class="v">swept</div><div class="d">measured per device by the in-app tuner</div></div>
+      </div>
+      <div class="opt-row">
+        <div class="opt-kind">Energy<span class="when">Measurement</span></div>
+        <div class="opt-body"><h3>Tokens per joule</h3>
+        <p>Where the kernel exposes the battery's power rails, every configuration is also scored for energy per token. On a phone, a config that's 5% faster but 30% hungrier is a bad trade — efficiency is a ranking axis, not an afterthought.</p></div>
+        <div class="opt-result"><div class="v">per config</div><div class="d">sampled live during each sweep point</div></div>
+      </div>
+    </div>
+    <p class="small center fade stats-note">Measured numbers are from the Nothing Phone 2a — the only device through the harness so far — and trace to raw JSON in <code>results/</code>. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
+  </div>
+</section>
+
 <section id="repro" class="band grey">
   <div class="col stack lg">
     <div class="center stack fade">
       <div class="kicker">Reproducible by design</div>
       <h2>One command reruns<br>every number.</h2>
-      <p class="lead">Plug in any Android phone. Get your own numbers.</p>
+      <p class="lead">Plug in any Android phone. The harness reads its silicon, sweeps the builds, and writes its own JSON — no phone is special-cased.</p>
     </div>
     <div class="term fade" aria-label="Terminal output of the benchmark harness">
       <div class="dots"><span></span><span></span><span></span></div>
@@ -376,7 +625,7 @@
     <h2>Stop guessing.<br>Measure.</h2>
     <p class="lead narrow">Every component — quantization, i8mm, compiler flags, the harness — explained from zero.</p>
     <div class="actions">
-      <a class="btn" href="https://github.com/ayandgp/pockettune/releases/latest" title="placeholder link">Download the app</a>
+      <a class="btn" href="https://github.com/ayanbag/pockettune/releases/latest" title="placeholder link">Download the app</a>
       <a class="chev" href="learn.html">Inside PocketTune</a>
     </div>
   </div>
@@ -384,10 +633,10 @@
 
 <footer>
   <div class="col">
-    <p class="small">PocketTune — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track. Open source under MIT. All measurements taken on a Nothing Phone 2a (MediaTek Dimensity 7200 Pro); raw data in <code>results/</code>.</p>
+    <p class="small">PocketTune — Arm Create : AI Optimization Challenge 2026 · Mobile AI Track. Open source under MIT. Every published figure is labelled with the phone that produced it and traces to raw JSON in <code>results/</code>. No number on this site comes from an emulator.</p>
     <div class="row">
       <a href="learn.html">Inside PocketTune</a>
-      <a href="https://github.com/ayandgp/pockettune" title="placeholder link">GitHub</a>
+      <a href="https://github.com/ayanbag/pockettune" title="placeholder link">GitHub</a>
       <a href="https://arm-ai-optimization-challenge.devpost.com/">Challenge</a>
       <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>
     </div>
@@ -397,6 +646,161 @@
 <script>
 (function () {
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ───────────────────────────────────────────────────────────────────────────
+     DEVICES — the only place a phone is named on this site.
+     Benchmarked a new phone? Append an object here; the evidence panels, the
+     coverage line and the terminal demo all rebuild themselves. Numbers come
+     straight from the matching results/*.json (median of 5 reps).
+     Only phones that actually went through the harness belong in here — an
+     unmeasured device gets no panel, no chips, and no claims.
+     ─────────────────────────────────────────────────────────────────────────── */
+  var DEVICES = [
+    {
+      status: "measured",
+      soc: "MediaTek Dimensity 7200 Pro",
+      phone: "Nothing Phone (2a)",
+      abi: "arm64-v8a",
+      date: "12 July 2026",
+      dotprod: true, i8mm: true, sve2: true,
+      bigCores: [6, 7],
+      cores: "2× Cortex-A715 @ 2.8 GHz + 6× Cortex-A510 @ 2.0 GHz",
+      model: "Llama 3.2 1B · Q4_0",
+      source: "results/a142-20260712T112232Z.json",
+      builds: [
+        { name: "generic",    flag: "generic arm64-v8a",                 pp: 20.514182,  ppThreads: 6, tg: 12.730397, tgThreads: 6 },
+        { name: "arch flags", flag: "-march=armv8.2a+i8mm+dotprod",      pp: 101.427313, ppThreads: 6, tg: 17.003851, tgThreads: 2, vs: 0 },
+        { name: "+ KleidiAI", flag: "arch flags + GGML_CPU_KLEIDIAI=ON", pp: 100.085041, ppThreads: 6, tg: 15.610392, tgThreads: 2, vs: 1 }
+      ],
+      note: "The chip has the i8mm matrix instructions, and the compiler flags are what unlock them. Arm's KleidiAI kernels land within noise of plain compiled code for Q4_0 here — llama.cpp's own repack path already exploits i8mm well."
+    }
+  ];
+
+  var MEASURED = DEVICES.filter(function (d) { return d.status === "measured"; });
+
+  /* ── render one attribution ladder per measured device ── */
+  var host = document.getElementById("devices");
+
+  function chips(d) {
+    var out = ['<span class="chip">' + d.abi + "</span>"];
+    [["dotprod", d.dotprod], ["i8mm", d.i8mm], ["sve2", d.sve2]].forEach(function (f) {
+      out.push('<span class="chip ' + (f[1] ? "has" : "lacks") + '">' + f[0] + "</span>");
+    });
+    out.push('<span class="chip">big cores cpu' + JSON.stringify(d.bigCores).replace(/,/g, ",") + "</span>");
+    return '<div class="chips">' + out.join("") + "</div>";
+  }
+
+  function head(d) {
+    return '<div class="dev-head"><div class="dev-title"><span class="soc">' + d.soc +
+      '</span><span class="phone">' + d.phone + "</span></div>" + chips(d) + "</div>";
+  }
+
+  /* label for a bar: absolute tok/s, plus gain against the build it's compared to */
+  function delta(v, ref) {
+    var r = v / ref;
+    if (r >= 1.05) return r.toFixed(2) + "×";
+    var pct = (r - 1) * 100;
+    if (Math.abs(pct) < 1.5) return "≈0%";
+    return (pct > 0 ? "+" : "−") + Math.abs(pct).toFixed(0) + "%";
+  }
+
+  function group(d, title, key, threadKey, scale) {
+    var rows = d.builds.map(function (b, i) {
+      var v = b[key], colour = "var(--c" + Math.min(i + 1, 3) + ")";
+      var label = v.toFixed(1) + (b.vs === undefined ? " tok/s" : " · " + delta(v, d.builds[b.vs][key]));
+      var tip = b.flag + " · " + b[threadKey] + " threads · " + v.toFixed(2) + " tok/s";
+      return '<div class="crow"><span class="rname">' + b.name +
+        '</span><div class="barwrap"><div class="databar" style="background:' + colour +
+        '" data-w="' + (v / scale * 82).toFixed(1) + '"><span class="val">' + label +
+        '</span><span class="tip">' + tip + "</span></div></div></div>";
+    }).join("");
+    return '<div class="cgroup"><div class="cgroup-title">' + title + "</div>" + rows + "</div>";
+  }
+
+  function table(d) {
+    var body = d.builds.map(function (b) {
+      return "<tr><td>" + b.flag + "</td><td>" + b.pp.toFixed(2) + "</td><td>" + b.tg.toFixed(2) +
+        "</td><td>" + (b.pp / d.builds[0].pp).toFixed(2) + "× / " + (b.tg / d.builds[0].tg).toFixed(2) + "×</td></tr>";
+    }).join("");
+    return "<details><summary>View as table</summary><table><thead><tr><th>Build</th><th>Prefill</th>" +
+      "<th>Decode</th><th>vs generic</th></tr></thead><tbody>" + body + "</tbody></table></details>";
+  }
+
+  function measuredPanel(d) {
+    /* one scale across both groups, so decode reads as genuinely slower than prefill */
+    var scale = Math.max.apply(null, d.builds.map(function (b) { return Math.max(b.pp, b.tg); }));
+    /* no .fade on the slide itself — an off-screen slide would never intersect and stay invisible;
+       the carousel wrapper fades in and sets every bar's width, including the ones you swipe to */
+    return '<div class="panel">' + head(d) +
+      '<div><span class="badge">Benchmarked on-device · ' + d.date + '</span>' +
+      '<p class="body-2 dev-meta">' + d.model + " · " + d.cores +
+      ". Five repetitions per configuration, two-minute cooldowns between builds. Raw JSON: <code>" +
+      d.source + "</code></p></div>" +
+      '<div class="chart">' +
+      '<div class="legend"><span><span class="swatch" style="background:var(--c1)"></span>generic build — no Arm feature flags</span>' +
+      '<span><span class="swatch" style="background:var(--c2)"></span>+ arch flags for this chip</span>' +
+      '<span><span class="swatch" style="background:var(--c3)"></span>+ KleidiAI on top</span></div>' +
+      group(d, "Prefill — reading your prompt (pp128)", "pp", "ppThreads", scale) +
+      group(d, "Decode — writing the answer (tg64)", "tg", "tgThreads", scale) +
+      table(d) + "</div>" +
+      '<p class="body-2 dev-meta">' + d.note + "</p></div>";
+  }
+
+  /* carousel: one slide per benchmarked phone — controls appear only once there are two */
+  if (host) {
+    var many = MEASURED.length > 1;
+    host.innerHTML =
+      '<div class="carousel fade">' +
+        '<div class="dev-track" id="dev-track">' + MEASURED.map(measuredPanel).join("") + "</div>" +
+        (many
+          ? '<div class="carousel-bar"><div class="dots" id="dev-dots"></div>' +
+            '<button class="arrow" id="dev-prev" type="button" aria-label="Previous device">‹</button>' +
+            '<button class="arrow" id="dev-next" type="button" aria-label="Next device">›</button></div>'
+          : "") +
+      "</div>" +
+      '<p class="small coverage fade">Devices benchmarked so far: <b>' + MEASURED.length +
+      "</b>. Run the harness on yours and its JSON becomes the next panel — nothing is published for " +
+      "a phone we haven't actually run.</p>";
+
+    if (many) {
+      var track = document.getElementById("dev-track"),
+          dotbox = document.getElementById("dev-dots"),
+          prev = document.getElementById("dev-prev"),
+          next = document.getElementById("dev-next"),
+          at = 0;
+
+      MEASURED.forEach(function (d, i) {
+        var b = document.createElement("button");
+        b.className = "dot";
+        b.type = "button";
+        b.setAttribute("aria-label", d.soc);
+        b.addEventListener("click", function () { go(i); });
+        dotbox.appendChild(b);
+      });
+
+      function go(i) {
+        at = Math.max(0, Math.min(MEASURED.length - 1, i));
+        track.scrollTo({ left: track.children[at].offsetLeft - track.offsetLeft, behavior: reduced ? "auto" : "smooth" });
+        sync();
+      }
+      function sync() {
+        Array.prototype.forEach.call(dotbox.children, function (d, i) {
+          d.setAttribute("aria-current", i === at ? "true" : "false");
+        });
+        prev.disabled = at === 0;
+        next.disabled = at === MEASURED.length - 1;
+      }
+      prev.addEventListener("click", function () { go(at - 1); });
+      next.addEventListener("click", function () { go(at + 1); });
+      /* keep dots honest when the user swipes the track directly */
+      track.addEventListener("scroll", function () {
+        var w = track.clientWidth || 1;
+        var i = Math.round(track.scrollLeft / w);
+        if (i !== at) { at = i; sync(); }
+      });
+      sync();
+    }
+  }
 
   /* fade-up + counters + bars */
   var counted = new WeakSet();
@@ -475,6 +879,25 @@
     requestAnimationFrame(frame);
   }
 
+  /* architecture — idle drift + hover/focus sync between plates, labels, legend */
+  var archScene = document.getElementById("arch-scene");
+  if (archScene) {
+    var stack3d = document.getElementById("stack3d");
+    if (stack3d && !reduced) stack3d.classList.add("live");
+    var layered = archScene.querySelectorAll("[data-layer]");
+    function heat(n, on) {
+      layered.forEach(function (el) {
+        if (el.dataset.layer === n) el.classList.toggle("hot", on);
+      });
+    }
+    layered.forEach(function (el) {
+      el.addEventListener("mouseenter", function () { heat(el.dataset.layer, true); });
+      el.addEventListener("mouseleave", function () { heat(el.dataset.layer, false); });
+      el.addEventListener("focus", function () { heat(el.dataset.layer, true); });
+      el.addEventListener("blur", function () { heat(el.dataset.layer, false); });
+    });
+  }
+
   /* sweep simulator */
   var sweep = document.getElementById("sweep"), status = document.getElementById("sweep-status");
   if (sweep) {
@@ -517,19 +940,30 @@
     }
   }
 
-  /* terminal typing — real harness output */
-  var lines = [
-    "▸ Nothing A142  (Mediatek MT6886)",
-    "  i8mm=<span class='g'>True</span>  dotprod=<span class='g'>True</span>  sve2=<span class='g'>True</span>  big cores: cpu[6, 7]",
-    "",
-    "▸ running variant: <span class='o'>generic</span>",
-    "     pp128  6 threads:   <span class='d'>20.51 tok/s</span>",
-    "▸ running variant: <span class='o'>arch</span>",
-    "     pp128  6 threads:  <span class='g'>101.43 tok/s</span>",
-    "",
-    "  Attribution:  pp128  generic → arch   <span class='g'>4.94× total</span>",
-    "<span class='d'>✓ raw results → results/a142-20260712T112232Z.json</span>"
-  ];
+  /* terminal typing — real harness output from the most recent measured device */
+  var lines = (function () {
+    var d = MEASURED[MEASURED.length - 1];
+    if (!d) return ["▸ no device attached"];
+    var base = d.builds[0], arch = d.builds[1];
+    var feat = function (name, on) {
+      return name + "=<span class='" + (on ? "g" : "d") + "'>" + (on ? "True" : "False") + "</span>";
+    };
+    return [
+      "▸ detected  " + d.soc + "  (" + d.abi + ")",
+      "  " + feat("dotprod", d.dotprod) + "  " + feat("i8mm", d.i8mm) + "  " + feat("sve2", d.sve2) +
+        "  big cores: cpu" + JSON.stringify(d.bigCores).replace(/,/g, ", "),
+      "  → build variants selected from those features",
+      "",
+      "▸ running variant: <span class='o'>" + base.name + "</span>",
+      "     pp128:  <span class='d'>" + base.pp.toFixed(2) + " tok/s</span>",
+      "▸ running variant: <span class='o'>" + arch.name + "</span>",
+      "     pp128:  <span class='g'>" + arch.pp.toFixed(2) + " tok/s</span>",
+      "",
+      "  Attribution:  pp128  " + base.name + " → " + arch.name +
+        "   <span class='g'>" + (arch.pp / base.pp).toFixed(2) + "× on this chip</span>",
+      "<span class='d'>✓ raw results → " + d.source + "</span>"
+    ];
+  })();
   var body = document.getElementById("termbody");
   if (body) {
     if (reduced) {

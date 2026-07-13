@@ -135,6 +135,54 @@ export function TrashIcon(props: IconProps) {
   );
 }
 
+export function RefreshIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" {...s(props)} />
+      <Path d="M19.5 4v4h-4" {...s(props)} />
+    </Svg>
+  );
+}
+
+export function BoxIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" {...s(props)} />
+      <Path d="M4 7.5l8 4.5 8-4.5" {...s(props)} />
+      <Path d="M12 12v9" {...s(props)} />
+    </Svg>
+  );
+}
+
+export function HistoryIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Path d="M4.5 12a7.5 7.5 0 1 1 2.2 5.3" {...s(props)} />
+      <Path d="M4.5 12V7.5" {...s(props)} />
+      <Path d="M4.5 12H9" {...s(props)} />
+      <Path d="M12 8.5V12l2.8 2" {...s(props)} />
+    </Svg>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Line x1={12} y1={5} x2={12} y2={19} {...s(props)} strokeWidth={2} />
+      <Line x1={5} y1={12} x2={19} y2={12} {...s(props)} strokeWidth={2} />
+    </Svg>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Line x1={6.5} y1={6.5} x2={17.5} y2={17.5} {...s(props)} strokeWidth={2} />
+      <Line x1={17.5} y1={6.5} x2={6.5} y2={17.5} {...s(props)} strokeWidth={2} />
+    </Svg>
+  );
+}
+
 export function SparkleIcon(props: IconProps) {
   return (
     <Svg {...base(props)}>

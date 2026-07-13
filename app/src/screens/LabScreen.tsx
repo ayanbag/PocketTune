@@ -147,6 +147,44 @@ export function LabScreen({ theme }: { theme: Theme }) {
         </View>
       )}
 
+      {history.length >= 2 && (
+        <View>
+          <SectionHeader theme={theme} title="Tuning trend on this phone" />
+          <Card theme={theme}>
+            <LineChart
+              theme={theme}
+              unit="t/s"
+              xLabels={[...history]
+                .reverse()
+                .map(r =>
+                  new Date(r.timestamp).toLocaleDateString(undefined, {
+                    month: 'numeric',
+                    day: 'numeric',
+                  }),
+                )}
+              series={[
+                {
+                  name: 'Tuned best',
+                  color: theme.series[0],
+                  values: [...history].reverse().map(r => r.best.decodeTps),
+                },
+                {
+                  name: 'llama.cpp default',
+                  color: theme.series[1],
+                  values: [...history].reverse().map(r => r.baseline.decodeTps),
+                },
+              ]}
+            />
+            <Divider theme={theme} />
+            <Text style={[type.subhead, { color: theme.inkSecondary, marginTop: spacing.m }]}>
+              Best decode speed per sweep against the stock default, oldest to
+              newest. The gap is what tuning buys on this phone; run-to-run
+              wobble in the baseline is thermal, not noise in the method.
+            </Text>
+          </Card>
+        </View>
+      )}
+
       <View>
         <SectionHeader theme={theme} title="This phone's tuning history" />
         {history.length === 0 ? (

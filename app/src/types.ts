@@ -42,11 +42,19 @@ export interface CatalogModel {
   name: string;
   quant: string;
   params: string;
+  /** expected bytes for catalog entries; 0 = unknown until downloaded */
   sizeBytes: number;
-  url: string;
+  /** absent for sideloaded files — nothing to re-download from */
+  url?: string;
   file: string;
-  blurb: string;
-  recommendedWhen?: 'i8mm' | 'dotprod' | 'any';
+  blurb?: string;
+}
+
+export type ModelSource = 'catalog' | 'custom' | 'sideloaded';
+
+/** A model the registry knows about, wherever it came from. */
+export interface ModelInfo extends CatalogModel {
+  source: ModelSource;
 }
 
 export type ModelStatus = 'none' | 'downloading' | 'ready';
@@ -93,7 +101,26 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  /** ISO timestamp when the message was committed */
+  at?: string;
   /** decode tok/s reported by the engine for this reply */
   tps?: number;
   prefillTps?: number;
+  /** tokens generated in this reply */
+  tokens?: number;
+  /** wall-clock generation time in ms */
+  ms?: number;
+}
+
+/** A persisted conversation plus the context it was generated under. */
+export interface ChatSession {
+  id: string;
+  startedAt: string;
+  updatedAt: string;
+  modelId: string;
+  modelFile: string;
+  /** engine config the session ran with; null = untuned defaults */
+  config: TuneConfig | null;
+  tuned: boolean;
+  messages: ChatMessage[];
 }

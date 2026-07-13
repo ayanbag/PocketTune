@@ -1,9 +1,14 @@
 /**
- * PocketTune design tokens — Apple-inspired system.
+ * PocketTune app design tokens — warm-copper system: warm paper/charcoal
+ * neutrals, one copper accent. (The site uses Apple's design language; the
+ * app deliberately has its own warmer identity — chosen 2026-07-13 when the
+ * blue scheme was rejected.)
  *
- * Chart colors are the validated dataviz reference palette (CVD-safe ordering,
- * per-mode steps); UI chrome follows iOS conventions: system font, grouped
- * cards, hairline separators, one accent.
+ * The copper accent doubles as the single-series chart mark color and is
+ * validated per mode with the dataviz six-checks script (#b4531f on #fdfcfa,
+ * #d0713a on #201c18 — both pass lightness band, chroma, contrast).
+ * Multi-series charts keep the validated categorical reference palette in
+ * `series` (CVD-safe ordering, per-mode steps) — do not reorder it.
  */
 import { useColorScheme } from 'react-native';
 
@@ -37,46 +42,46 @@ export interface Theme {
 
 const light: Theme = {
   dark: false,
-  page: '#f2f2f0',
-  surface: '#fcfcfb',
-  surfaceElevated: '#fcfcfb',
-  inkPrimary: '#0b0b0b',
-  inkSecondary: '#52514e',
-  inkMuted: '#898781',
-  hairline: 'rgba(11,11,11,0.10)',
-  gridline: '#e1e0d9',
-  baseline: '#c3c2b7',
-  accent: '#2a78d6',
-  accentSoft: 'rgba(42,120,214,0.12)',
+  page: '#f4f1ec',
+  surface: '#fdfcfa',
+  surfaceElevated: '#fdfcfa',
+  inkPrimary: '#1a1512',
+  inkSecondary: '#575047',
+  inkMuted: '#8d857a',
+  hairline: 'rgba(26,21,18,0.10)',
+  gridline: '#e7e2d9',
+  baseline: '#cbc4b6',
+  accent: '#b4531f',
+  accentSoft: 'rgba(180,83,31,0.12)',
   onAccent: '#ffffff',
   series: ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7', '#e34948'],
   good: '#0ca30c',
-  warning: '#fab219',
+  warning: '#c77d00',
   critical: '#d03b3b',
   goodText: '#006300',
-  fill: 'rgba(11,11,11,0.05)',
-  fillStrong: 'rgba(11,11,11,0.09)',
+  fill: 'rgba(26,21,18,0.05)',
+  fillStrong: 'rgba(26,21,18,0.09)',
 };
 
 const dark: Theme = {
   dark: true,
-  page: '#0d0d0d',
-  surface: '#1a1a19',
-  surfaceElevated: '#232322',
-  inkPrimary: '#ffffff',
-  inkSecondary: '#c3c2b7',
-  inkMuted: '#898781',
+  page: '#151210',
+  surface: '#201c18',
+  surfaceElevated: '#2a2521',
+  inkPrimary: '#f8f4ef',
+  inkSecondary: '#cbc3b7',
+  inkMuted: '#8f877c',
   hairline: 'rgba(255,255,255,0.10)',
-  gridline: '#2c2c2a',
-  baseline: '#383835',
-  accent: '#3987e5',
-  accentSoft: 'rgba(57,135,229,0.18)',
-  onAccent: '#ffffff',
+  gridline: '#2f2a25',
+  baseline: '#3c362f',
+  accent: '#d0713a',
+  accentSoft: 'rgba(208,113,58,0.18)',
+  onAccent: '#211106',
   series: ['#3987e5', '#199e70', '#c98500', '#008300', '#9085e9', '#e66767'],
   good: '#0ca30c',
   warning: '#fab219',
-  critical: '#d03b3b',
-  goodText: '#0ca30c',
+  critical: '#e66767',
+  goodText: '#3ec46a',
   fill: 'rgba(255,255,255,0.06)',
   fillStrong: 'rgba(255,255,255,0.11)',
 };

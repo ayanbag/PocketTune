@@ -1,108 +1,38 @@
 /**
- * Tune tab — the product's core loop: pick a model, sweep configs on this
- * phone, see the measured winner, apply it.
+ * Tune tab — the product's core loop: sweep configs on this phone, see the
+ * measured winner, apply it. Model management lives on the Models tab.
  */
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { radius, spacing, Theme, type } from '../theme';
 import { useStore } from '../store';
-import { CATALOG, catalogById } from '../data/catalog';
 import {
   Button,
   Card,
   Chip,
-  Divider,
-  ProgressBar,
   Row,
   SectionHeader,
   Segmented,
 } from '../components/ui';
 import { HBars, RingGauge } from '../components/charts';
-import { CheckIcon, DownloadIcon, SparkleIcon, TrashIcon } from '../components/icons';
+import { CheckIcon, SparkleIcon } from '../components/icons';
 import { configLabel } from '../lib/tuner';
 
 function bytesGb(n: number): string {
   return `${(n / 1e9).toFixed(2)} GB`;
 }
 
-function ModelRow({ theme, id }: { theme: Theme; id: string }) {
-  const model = catalogById(id)!;
-  const state = useStore(s => s.models[id]);
-  const selected = useStore(s => s.selectedModelId === id);
-  const { selectModel, startDownload, cancelDownload, removeModel } = useStore();
-
-  return (
-    <Pressable
-      onPress={() => state.status === 'ready' && selectModel(id)}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-      <Row style={{ paddingVertical: 12, gap: 12 }}>
-        <View
-          style={{
-            width: 22,
-            alignItems: 'center',
-          }}>
-          {selected && state.status === 'ready' ? (
-            <CheckIcon color={theme.accent} size={20} />
-          ) : null}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Row style={{ gap: 8 }}>
-            <Text style={[type.headline, { color: theme.inkPrimary }]}>{model.name}</Text>
-            <Chip theme={theme} label={model.quant} tone={selected ? 'accent' : 'neutral'} />
-          </Row>
-          <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
-            {model.params} · {bytesGb(model.sizeBytes)}
-          </Text>
-          {state.status === 'downloading' && (
-            <View style={{ marginTop: 8, marginRight: 8 }}>
-              <ProgressBar theme={theme} fraction={state.progress} />
-              <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 4 }]}>
-                {Math.round(state.progress * 100)}% · {bytesGb(state.bytesWritten)}
-              </Text>
-            </View>
-          )}
-          {state.error ? (
-            <Text style={[type.footnote, { color: theme.critical, marginTop: 4 }]}>
-              {state.error}
-            </Text>
-          ) : null}
-        </View>
-        {state.status === 'none' && (
-          <Pressable onPress={() => startDownload(id)} hitSlop={10}>
-            <DownloadIcon color={theme.accent} size={22} />
-          </Pressable>
-        )}
-        {state.status === 'downloading' && (
-          <Pressable onPress={() => cancelDownload(id)} hitSlop={10}>
-            <Text style={[type.subhead, { color: theme.critical }]}>Cancel</Text>
-          </Pressable>
-        )}
-        {state.status === 'ready' && (
-          <Pressable
-            onPress={() =>
-              Alert.alert('Delete model?', `${model.file} will be removed from this device.`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => removeModel(id) },
-              ])
-            }
-            hitSlop={10}>
-            <TrashIcon color={theme.inkMuted} size={20} />
-          </Pressable>
-        )}
-      </Row>
-    </Pressable>
-  );
-}
-
 export function TuneScreen({ theme }: { theme: Theme }) {
   const tune = useStore(s => s.tune);
   const selectedModelId = useStore(s => s.selectedModelId);
   const models = useStore(s => s.models);
+  const modelList = useStore(s => s.modelList);
   const appliedConfig = useStore(s => s.appliedConfig);
   const battery = useStore(s => s.battery);
-  const { startTune, applyBest } = useStore();
+  const { startTune, applyBest, setTab } = useStore();
   const [mode, setMode] = useState<'quick' | 'full'>('quick');
 
+  const model = modelList.find(m => m.id === selectedModelId);
   const modelReady = models[selectedModelId]?.status === 'ready';
   const run = tune.lastRun;
   const lowBattery = battery?.levelPct != null && battery.levelPct < 20;
@@ -122,18 +52,34 @@ export function TuneScreen({ theme }: { theme: Theme }) {
 
       <View>
         <SectionHeader theme={theme} title="Model" />
-        <Card theme={theme} style={{ paddingVertical: spacing.xs }}>
-          {CATALOG.map((m, i) => (
-            <View key={m.id}>
-              {i > 0 && <Divider theme={theme} inset={34} />}
-              <ModelRow theme={theme} id={m.id} />
+        <Card theme={theme}>
+          <Row style={{ gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              {model && modelReady ? (
+                <>
+                  <Row style={{ gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={[type.headline, { color: theme.inkPrimary }]}>
+                      {model.name}
+                    </Text>
+                    <Chip theme={theme} label={model.quant} tone="accent" />
+                  </Row>
+                  <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
+                    {model.params} · {bytesGb(model.sizeBytes)}
+                  </Text>
+                </>
+              ) : (
+                <Text style={[type.body, { color: theme.inkSecondary }]}>
+                  No model on this device yet — grab one from the Models tab.
+                </Text>
+              )}
             </View>
-          ))}
+            <Pressable onPress={() => setTab('models')} hitSlop={8}>
+              <Text style={[type.subhead, { color: theme.accent, fontWeight: '600' }]}>
+                {modelReady ? 'Change' : 'Get one'}
+              </Text>
+            </Pressable>
+          </Row>
         </Card>
-        <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 6, marginLeft: 4 }]}>
-          Downloads go to this app's files dir — you can also `adb push` a .gguf
-          into models/ there.
-        </Text>
       </View>
 
       <View>
@@ -280,6 +226,58 @@ export function TuneScreen({ theme }: { theme: Theme }) {
                 applied ? <CheckIcon color={theme.inkPrimary} size={18} /> : undefined
               }
             />
+          </Card>
+        </View>
+      )}
+
+      {run && !tune.running && (
+        <View>
+          <SectionHeader theme={theme} title="Baseline vs tuned" />
+          <Card theme={theme} style={{ gap: spacing.m }}>
+            <Text style={[type.subhead, { color: theme.inkSecondary }]}>Decode — what chat feels like</Text>
+            <HBars
+              theme={theme}
+              unit="t/s"
+              data={[
+                { label: 'llama.cpp default', value: run.baseline.decodeTps },
+                { label: `Tuned · ${run.best.label}`, value: run.best.decodeTps, emphasized: true,
+                  note: run.decodeGain >= 1.005 ? `${run.decodeGain.toFixed(2)}×` : undefined },
+              ]}
+            />
+            <Text style={[type.subhead, { color: theme.inkSecondary }]}>Prefill — time to first token</Text>
+            <HBars
+              theme={theme}
+              unit="t/s"
+              data={[
+                { label: 'llama.cpp default', value: run.baseline.prefillTps },
+                { label: `Tuned · ${run.best.label}`, value: run.best.prefillTps, emphasized: true,
+                  note: run.prefillGain >= 1.005 ? `${run.prefillGain.toFixed(2)}×` : undefined },
+              ]}
+            />
+          </Card>
+        </View>
+      )}
+
+      {run && !tune.running && run.points.filter(p => p.tokensPerJoule != null).length >= 2 && (
+        <View>
+          <SectionHeader theme={theme} title="Energy efficiency" />
+          <Card theme={theme}>
+            <HBars
+              theme={theme}
+              unit="tok/J"
+              data={run.points
+                .filter(p => p.tokensPerJoule != null)
+                .map(p => ({
+                  label: p.label + (p.isBaseline ? '  (llama.cpp default)' : ''),
+                  value: p.tokensPerJoule as number,
+                  color: theme.series[1],
+                  emphasized: p.label === run.best.label,
+                }))}
+            />
+            <Text style={[type.footnote, { color: theme.inkMuted, marginTop: spacing.s }]}>
+              Tokens generated per joule from the battery rail during decode —
+              the config that wins on speed doesn't always win on battery.
+            </Text>
           </Card>
         </View>
       )}
