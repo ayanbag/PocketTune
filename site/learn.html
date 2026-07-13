@@ -410,7 +410,7 @@
         <thead><tr><th>Component</th><th>What it is</th><th>Why this one</th></tr></thead>
         <tbody>
           <tr><td class="name">llama.cpp</td><td>C++ inference engine for GGUF models</td><td class="why">The industry standard for CPU inference. Builds anywhere, and exposes every knob we need to test — arch flags, KleidiAI, repack, threads.</td></tr>
-          <tr><td class="name">React Native</td><td>Cross-platform app framework</td><td class="why">The builder writes only TypeScript and Python. RN keeps 100% of authored code in TS — and PocketPal (500K+ installs) proves the stack works for exactly this.</td></tr>
+          <tr><td class="name">React Native</td><td>Cross-platform app framework</td><td class="why">The builder writes only TypeScript and Python. RN keeps 100% of authored code in TS while llama.rn handles the native inference layer.</td></tr>
           <tr><td class="name">llama.rn</td><td>React Native bindings for llama.cpp</td><td class="why">Lets the TypeScript app call the C++ engine without writing native code. Audited: its prebuilts pack six arm64 kernel builds and dispatch by CPU feature at runtime — the same detection-over-assumption story the harness proves with explicit per-arch builds.</td></tr>
           <tr><td class="name">Android NDK</td><td>Cross-compiler toolchain</td><td class="why">Builds arm64 phone binaries on an x86 Windows laptop. No Mac, no emulator.</td></tr>
           <tr><td class="name">adb</td><td>USB command line to the phone</td><td class="why">Push binaries, run benchmarks, read CPU features and battery state — scriptable and reproducible, with no app install needed.</td></tr>
