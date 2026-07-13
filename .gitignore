@@ -45,8 +45,8 @@ venv/
 .DS_Store
 Thumbs.db
 
-#documentation
+# Internal working docs — not part of the published repo
 CLAUDE.md
 PLAN.md
-RELEASE.MD
+RELEASE.md
 tools/make_icons.py
