@@ -53,14 +53,14 @@ jobs:
             "build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          build-root-directory: app/android
 
       - run: npm ci
 
       - name: Build release APK
         working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
         working-directory: .
