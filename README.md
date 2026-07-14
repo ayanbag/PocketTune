@@ -1,5 +1,13 @@
 <img src="site/public/poster.png" alt="Image" width="100%" />
 
+<p align="center">
+  <!-- <a href="https://github.com/ayanbag/PocketTune/actions/workflows/pages.yml"><img alt="Deploy site" src="https://img.shields.io/github/actions/workflow/status/ayanbag/PocketTune/pages.yml?branch=master&label=site&logo=githubpages&logoColor=white" /></a> -->
+  <a href="https://github.com/ayanbag/PocketTune/actions/workflows/release.yml"><img alt="Release APK" src="https://img.shields.io/github/actions/workflow/status/ayanbag/PocketTune/release.yml?label=release%20apk&logo=android&logoColor=white" /></a>
+  <a href="https://github.com/ayanbag/PocketTune/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/ayanbag/PocketTune?include_prereleases&label=apk&logo=github" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" /></a>
+  <a href="https://arm-ai-optimization-challenge.devpost.com/"><img alt="Arm Create 2026" src="https://img.shields.io/badge/Arm%20Create-AI%20Optimization%20Challenge%202026-0091BD" /></a>
+</p>
+
 **Finds and applies the fastest local-LLM configuration for the phone it runs on.**
 
 PocketTune is an Android app that detects your phone's Arm CPU features, benchmarks a sweep of
