@@ -305,16 +305,19 @@ export function Sparkline({
   height = 36,
   color,
   unit,
+  /** false when the caller already prints the latest value next to the chart */
+  showValue = true,
 }: {
   theme: Theme;
   values: number[];
   height?: number;
   color?: string;
   unit?: string;
+  showValue?: boolean;
 }) {
   const [width, setWidth] = useState(0);
   const stroke = color ?? theme.accent;
-  const padR = unit ? 58 : 40;
+  const padR = !showValue ? 8 : unit ? 58 : 40;
   const padY = 6;
   const max = Math.max(...values, 0.001);
   const min = Math.min(...values, 0);
@@ -333,7 +336,7 @@ export function Sparkline({
           <Line
             x1={4}
             y1={height - padY + 3}
-            x2={width - padR + 24}
+            x2={showValue ? width - padR + 24 : width - 4}
             y2={height - padY + 3}
             stroke={theme.baseline}
             strokeWidth={1}
@@ -354,15 +357,17 @@ export function Sparkline({
             stroke={theme.surface}
             strokeWidth={2}
           />
-          <SvgText
-            x={xAt(values.length - 1) + 10}
-            y={yAt(last) + 4}
-            fill={theme.inkPrimary}
-            fontSize={12}
-            fontWeight="600">
-            {fmt(last)}
-            {unit ? ` ${unit}` : ''}
-          </SvgText>
+          {showValue && (
+            <SvgText
+              x={xAt(values.length - 1) + 10}
+              y={yAt(last) + 4}
+              fill={theme.inkPrimary}
+              fontSize={12}
+              fontWeight="600">
+              {fmt(last)}
+              {unit ? ` ${unit}` : ''}
+            </SvgText>
+          )}
         </Svg>
       )}
     </View>

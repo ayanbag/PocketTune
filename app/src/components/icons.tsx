@@ -183,6 +183,25 @@ export function CloseIcon(props: IconProps) {
   );
 }
 
+export function CopyIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Rect x={8.5} y={8.5} width={11} height={11} rx={2.5} {...s(props)} />
+      <Path d="M15.5 5.5A1.5 1.5 0 0 0 14 4H6a2 2 0 0 0-2 2v8a1.5 1.5 0 0 0 1.5 1.5" {...s(props)} />
+    </Svg>
+  );
+}
+
+export function CodeIcon(props: IconProps) {
+  return (
+    <Svg {...base(props)}>
+      <Path d="M8.5 8L4 12l4.5 4" {...s(props)} />
+      <Path d="M15.5 8L20 12l-4.5 4" {...s(props)} />
+      <Line x1={13.5} y1={5} x2={10.5} y2={19} {...s(props)} />
+    </Svg>
+  );
+}
+
 export function SparkleIcon(props: IconProps) {
   return (
     <Svg {...base(props)}>

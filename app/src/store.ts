@@ -109,6 +109,9 @@ interface AppState {
   deleteChat: (id: string) => void;
 }
 
+/** Streamed tokens are coalesced into state paints no faster than this. */
+const STREAM_PAINT_MS = 150;
+
 const downloads = new Map<string, DownloadHandle>();
 let activeStream: StreamHandle | null = null;
 
@@ -514,15 +517,36 @@ export const useStore = create<AppState>((set, get) => ({
           m.id === assistantId ? { ...m, ...patch } : m,
         ),
       }));
+
+    // Live streaming, throttled. Patching state on every token re-parses the
+    // reply's Markdown per token — quadratic work that visibly starved the JS
+    // thread on-device — so token arrivals are coalesced into a few paints per
+    // second here, and the bubble smooths those chunks into a continuous
+    // ChatGPT-style flow (see Bubble in ChatScreen). Tokens are also counted
+    // as a fallback for engines that don't report predicted_n.
+    let tokens = 0;
+    let pending: string | null = null;
+    let lastPaint = 0;
+    const onToken = (acc: string) => {
+      tokens += 1;
+      pending = acc;
+      const now = Date.now();
+      if (now - lastPaint >= STREAM_PAINT_MS) {
+        lastPaint = now;
+        patchAssistant({ text: acc });
+        pending = null;
+      }
+    };
+
     try {
-      activeStream = chat(history, acc => patchAssistant({ text: acc }));
+      activeStream = chat(history, onToken);
       const result = await activeStream.promise;
       patchAssistant({
         text: result.text.trim() || '…',
         at: new Date().toISOString(),
         tps: result.decodeTps,
         prefillTps: result.prefillTps,
-        tokens: result.tokens,
+        tokens: result.tokens || tokens,
         ms: result.ms,
       });
     } catch (err) {

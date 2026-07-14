@@ -1,14 +1,18 @@
 /**
- * Chat tab — the payoff: an offline assistant running the tuned config,
- * with per-reply decode speed so the optimization stays visible.
+ * Chat tab — the payoff: an offline assistant running the tuned config.
  *
- * Every conversation persists as a session with its metadata (model, applied
- * config, per-reply tok/s and token counts); the history sheet lets you reopen
- * or delete them, and a sparkline tracks decode speed across the session —
- * thermal droop shows up as a downward drift.
+ * This is the one screen a non-technical person will actually use, so the copy
+ * here is plain English and the engine internals (thread counts, flash
+ * attention, KV cache) stay on the Tune tab. The speed of each reply is still
+ * shown — that is the whole point of the app — but as "how fast the reply came
+ * out", not as a benchmark readout.
+ *
+ * Replies render as Markdown, with real code blocks (language label, no wrap,
+ * copy button).
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   Modal,
   Pressable,
@@ -21,9 +25,9 @@ import { radius, spacing, Theme, type } from '../theme';
 import { useStore } from '../store';
 import { Button, Card, Chip, Divider, Row } from '../components/ui';
 import {
-  BoltIcon,
   ChipIcon,
   CloseIcon,
+  CodeIcon,
   HistoryIcon,
   PlusIcon,
   SendIcon,
@@ -32,16 +36,24 @@ import {
   TrashIcon,
 } from '../components/icons';
 import { Sparkline } from '../components/charts';
-import { configLabel } from '../lib/tuner';
+import { Markdown } from '../components/markdown';
 import { sessionStats, sessionTitle } from '../lib/chats';
 import type { ChatMessage, ChatSession } from '../types';
 
 /** Starter prompts shown ChatGPT-style above the input on an empty chat. */
 const SUGGESTIONS: { Icon: typeof SparkleIcon; text: string }[] = [
-  { Icon: SparkleIcon, text: 'What can you do running fully offline?' },
-  { Icon: ChipIcon, text: "Explain this phone's AI hardware simply" },
-  { Icon: BoltIcon, text: 'Write a haiku about saving battery' },
+  { Icon: SparkleIcon, text: 'What can you do with no internet?' },
+  { Icon: CodeIcon, text: 'Write a Python script that renames my photos by date' },
+  { Icon: ChipIcon, text: 'Explain what makes this phone fast, simply' },
 ];
+
+/** Whether replies are getting slower — the shape of a phone heating up. */
+function isSlowing(values: number[]): boolean {
+  if (values.length < 3) return false;
+  const first = values[0];
+  const last = values[values.length - 1];
+  return last < first * 0.92;
+}
 
 function IconButton({
   theme,
@@ -70,13 +82,110 @@ function IconButton({
   );
 }
 
-function Bubble({ theme, msg }: { theme: Theme; msg: ChatMessage }) {
+/** Compact session speed strip: latest reply speed + the trend behind it. */
+function SpeedStrip({ theme, values }: { theme: Theme; values: number[] }) {
+  const latest = values[values.length - 1];
+  const slowing = isSlowing(values);
+  return (
+    <Card
+      theme={theme}
+      style={{ paddingVertical: spacing.m, paddingHorizontal: spacing.l, marginTop: spacing.m }}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text style={[type.subhead, { color: theme.inkSecondary }]}>Reply speed</Text>
+        <Row style={{ alignItems: 'baseline', gap: 3 }}>
+          <Text style={[type.headline, { color: theme.inkPrimary }]}>{latest.toFixed(1)}</Text>
+          <Text style={[type.footnote, { color: theme.inkMuted }]}>tokens/sec</Text>
+        </Row>
+      </Row>
+      <View style={{ marginTop: 6 }}>
+        <Sparkline theme={theme} values={values} height={30} showValue={false} />
+      </View>
+      <Text style={[type.footnote, { color: slowing ? theme.warning : theme.inkMuted, marginTop: 4 }]}>
+        {slowing
+          ? 'Slowing down as the phone warms up.'
+          : 'Holding steady across this conversation.'}
+      </Text>
+    </Card>
+  );
+}
+
+/** Three staggered pulsing dots — the reply is being generated. */
+function ThinkingDots({ theme }: { theme: Theme }) {
+  const dots = useRef([new Animated.Value(0.25), new Animated.Value(0.25), new Animated.Value(0.25)]).current;
+  useEffect(() => {
+    const loops = dots.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 150),
+          Animated.timing(v, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.25, duration: 320, useNativeDriver: true }),
+          Animated.delay((2 - i) * 150),
+        ]),
+      ),
+    );
+    loops.forEach(l => l.start());
+    return () => loops.forEach(l => l.stop());
+  }, [dots]);
+  return (
+    <Row style={{ gap: 5, paddingVertical: 4 }}>
+      {dots.map((v, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: theme.inkMuted,
+            opacity: v,
+          }}
+        />
+      ))}
+    </Row>
+  );
+}
+
+/** How often the streaming bubble advances its visible text. */
+const CHASE_INTERVAL_MS = 33;
+
+/**
+ * Memoized: while a reply is streaming, only that one bubble's `msg` identity
+ * changes, so every other bubble skips re-parsing its Markdown.
+ */
+const Bubble = React.memo(function Bubble({ theme, msg }: { theme: Theme; msg: ChatMessage }) {
   const isUser = msg.role === 'user';
+  const [detail, setDetail] = useState(false);
+  const ink = isUser ? theme.onAccent : theme.inkPrimary;
+
+  // ChatGPT-style flow: the store delivers text in ~150ms chunks (see
+  // sendMessage), and this bubble smooths them out by advancing a visible
+  // length a little every frame, rubber-banding toward whatever has arrived —
+  // steady typewriter when the model is the bottleneck, quick catch-up at the
+  // end. Only a bubble born empty animates; history renders complete at once.
+  const streamedIn = useRef(!isUser && !msg.text);
+  const targetLen = msg.text.length;
+  const [shownLen, setShownLen] = useState(streamedIn.current ? 0 : targetLen);
+  const caughtUp = shownLen >= targetLen;
+  useEffect(() => {
+    if (isUser || !streamedIn.current || caughtUp) return;
+    const id = setInterval(() => {
+      setShownLen(l =>
+        l >= targetLen ? l : Math.min(targetLen, l + Math.max(2, Math.ceil((targetLen - l) / 12))),
+      );
+    }, CHASE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isUser, targetLen, caughtUp]);
+
+  const done = msg.tps != null && msg.tps > 0 && caughtUp;
+  const shown = caughtUp ? msg.text : msg.text.slice(0, shownLen);
+  const revealing = !done;
+
   return (
     <View
       style={{
-        alignSelf: isUser ? 'flex-end' : 'flex-start',
-        maxWidth: '84%',
+        alignSelf: isUser ? 'flex-end' : 'stretch',
+        // Assistant replies go near-full width so code blocks have room; the
+        // user's own turn stays a right-hugging bubble.
+        maxWidth: isUser ? '84%' : '100%',
         marginVertical: 4,
       }}>
       <View
@@ -88,26 +197,34 @@ function Bubble({ theme, msg }: { theme: Theme; msg: ChatMessage }) {
           borderBottomRightRadius: isUser ? 6 : 18,
           borderBottomLeftRadius: isUser ? 18 : 6,
           paddingHorizontal: 14,
-          paddingVertical: 9,
+          paddingVertical: 10,
         }}>
-        <Text
-          style={[
-            type.body,
-            { color: isUser ? theme.onAccent : theme.inkPrimary },
-          ]}>
-          {msg.text || '…'}
-        </Text>
+        {isUser ? (
+          <Text style={[type.body, { color: ink }]}>{msg.text}</Text>
+        ) : shown ? (
+          <Markdown theme={theme} text={shown} color={ink} streaming={revealing} />
+        ) : (
+          <ThinkingDots theme={theme} />
+        )}
       </View>
-      {msg.tps != null && msg.tps > 0 && (
-        <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 3, marginLeft: 6 }]}>
-          {msg.tps.toFixed(1)} tok/s
-          {msg.tokens ? ` · ${msg.tokens} tok` : ''}
-          {msg.prefillTps ? ` · prefill ${msg.prefillTps.toFixed(0)} t/s` : ''}
-        </Text>
+
+      {/* Speed + token count land after the reveal finishes — the end of the turn. */}
+      {!isUser && !revealing && msg.tps != null && msg.tps > 0 && (
+        <Pressable onPress={() => setDetail(d => !d)} hitSlop={6}>
+          <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 3, marginLeft: 6 }]}>
+            {detail
+              ? `${msg.tps.toFixed(1)} tokens/sec · ${msg.tokens ?? 0} tokens in ${(
+                  (msg.ms ?? 0) / 1000
+                ).toFixed(1)}s${
+                  msg.prefillTps ? ` · read your message at ${msg.prefillTps.toFixed(0)}/s` : ''
+                }`
+              : `${msg.tps.toFixed(1)} tokens/sec · ${msg.tokens ?? 0} tokens`}
+          </Text>
+        </Pressable>
       )}
     </View>
   );
-}
+});
 
 function SessionRow({
   theme,
@@ -134,20 +251,19 @@ function SessionRow({
           <Row style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
             <Chip
               theme={theme}
-              label={model ? `${model.name} ${model.quant}` : session.modelFile}
+              label={model ? model.name : session.modelFile}
               tone={active ? 'accent' : 'neutral'}
             />
             <Chip
               theme={theme}
-              label={session.config ? configLabel(session.config) : 'untuned'}
+              label={session.tuned ? 'Tuned' : 'Default settings'}
               tone={session.tuned ? 'good' : 'off'}
             />
           </Row>
           <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 6 }]}>
             {new Date(session.updatedAt).toLocaleString()} · {stats.replies}{' '}
             {stats.replies === 1 ? 'reply' : 'replies'}
-            {stats.avgTps != null ? ` · ${stats.avgTps.toFixed(1)} tok/s avg` : ''}
-            {stats.totalTokens ? ` · ${stats.totalTokens} tok` : ''}
+            {stats.avgTps != null ? ` · ${stats.avgTps.toFixed(1)} tokens/sec` : ''}
           </Text>
         </View>
         <Pressable onPress={onDelete} hitSlop={10} style={{ paddingTop: 2 }}>
@@ -184,7 +300,7 @@ function HistorySheet({
             paddingBottom: spacing.xxl,
           }}>
           <Row style={{ justifyContent: 'space-between', marginBottom: spacing.m }}>
-            <Text style={[type.title2, { color: theme.inkPrimary }]}>Chat history</Text>
+            <Text style={[type.title2, { color: theme.inkPrimary }]}>Your chats</Text>
             <Pressable onPress={onClose} hitSlop={10}>
               <CloseIcon color={theme.inkMuted} size={20} />
             </Pressable>
@@ -192,8 +308,8 @@ function HistorySheet({
           {sessions.length === 0 ? (
             <Card theme={theme}>
               <Text style={[type.body, { color: theme.inkSecondary }]}>
-                No conversations yet. Every chat is saved on-device with the
-                model and config it ran under.
+                No conversations yet. Everything you say here is saved on this
+                phone only — never uploaded.
               </Text>
             </Card>
           ) : (
@@ -232,21 +348,28 @@ export function ChatScreen({ theme }: { theme: Theme }) {
   const selectedModelId = useStore(s => s.selectedModelId);
   const models = useStore(s => s.models);
   const sessionCount = useStore(s => s.chatSessions.length);
-  const { sendMessage, stopGeneration, ensureChatEngine, newChat } = useStore();
+  const { sendMessage, stopGeneration, ensureChatEngine, newChat, setTab } = useStore();
   const [draft, setDraft] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  // Follow the reveal as it grows the content — but stop the moment the user
+  // scrolls up to read something, and resume once they return to the bottom.
+  const stickToEnd = useRef(true);
 
   const modelId = selectedModelId;
   const model = useStore(s => s.modelList.find(m => m.id === modelId));
   const modelReady = models[modelId]?.status === 'ready';
   // Only this model's own applied config counts — an untuned model runs on
   // defaults, so don't badge it with a config measured on a different one.
-  const tunedConfig = applied[modelId]?.config ?? null;
+  const tuned = applied[modelId] != null;
 
-  const tpsSeries = messages
-    .filter(m => m.role === 'assistant' && m.tps != null && m.tps > 0)
-    .map(m => m.tps as number);
+  const tpsSeries = useMemo(
+    () =>
+      messages
+        .filter(m => m.role === 'assistant' && m.tps != null && m.tps > 0)
+        .map(m => m.tps as number),
+    [messages],
+  );
 
   useEffect(() => {
     if (modelReady && engineStatus === 'idle') {
@@ -289,34 +412,35 @@ export function ChatScreen({ theme }: { theme: Theme }) {
         </Row>
         {modelReady && (
           <Row style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-            {model && <Chip theme={theme} label={`${model.name} ${model.quant}`} tone="accent" />}
-            {tunedConfig ? (
-              <Chip theme={theme} label={`Tuned · ${configLabel(tunedConfig)}`} tone="good" />
-            ) : (
-              <Chip theme={theme} label="Untuned defaults" tone="off" />
-            )}
-            {engineStatus === 'loading' && <Chip theme={theme} label="Loading model…" />}
+            {model && <Chip theme={theme} label={model.name} tone="accent" />}
+            <Pressable onPress={() => setTab('tune')} hitSlop={6}>
+              <Chip
+                theme={theme}
+                label={tuned ? 'Tuned for this phone' : 'Not tuned yet — tap to speed up'}
+                tone={tuned ? 'good' : 'off'}
+              />
+            </Pressable>
+            {engineStatus === 'loading' && <Chip theme={theme} label="Waking the model up…" />}
           </Row>
         )}
-        {tpsSeries.length >= 2 && (
-          <View style={{ marginTop: spacing.s }}>
-            <Sparkline theme={theme} values={tpsSeries} unit="t/s" />
-            <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
-              Decode speed per reply this session — a downward drift means the
-              phone is heating up.
-            </Text>
-          </View>
-        )}
+        {tpsSeries.length >= 2 && <SpeedStrip theme={theme} values={tpsSeries} />}
       </View>
 
       {!modelReady ? (
         <View style={{ flex: 1, padding: spacing.xl, justifyContent: 'center' }}>
-          <Card theme={theme}>
-            <Text style={[type.headline, { color: theme.inkPrimary }]}>No model yet</Text>
-            <Text style={[type.body, { color: theme.inkSecondary, marginTop: 6 }]}>
-              Grab a model from the Models tab, then run the sweep on the Tune
-              tab. Chat runs completely offline with whatever config you apply.
+          <Card theme={theme} style={{ gap: spacing.m }}>
+            <Text style={[type.headline, { color: theme.inkPrimary }]}>
+              Nothing to chat with yet
             </Text>
+            <Text style={[type.body, { color: theme.inkSecondary }]}>
+              Pick a model from the Models tab and it downloads onto your
+              phone. After that it works with no internet at all.
+            </Text>
+            <Button
+              theme={theme}
+              label="Choose a model"
+              onPress={() => setTab('models')}
+            />
           </Card>
         </View>
       ) : (
@@ -325,6 +449,17 @@ export function ChatScreen({ theme }: { theme: Theme }) {
           data={messages}
           keyExtractor={m => m.id}
           renderItem={({ item }) => <Bubble theme={theme} msg={item} />}
+          onScroll={e => {
+            const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+            stickToEnd.current =
+              contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+          }}
+          scrollEventThrottle={64}
+          onContentSizeChange={() => {
+            if (stickToEnd.current && messages.length) {
+              listRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
           contentContainerStyle={{
             paddingHorizontal: spacing.xl,
             paddingTop: spacing.l,
@@ -340,13 +475,13 @@ export function ChatScreen({ theme }: { theme: Theme }) {
                     { color: theme.inkMuted, textAlign: 'center', paddingHorizontal: 30 },
                   ]}>
                   {engineError
-                    ? `Engine failed to load: ${engineError}`
-                    : 'Everything below runs on this phone’s Arm CPU. Airplane mode welcome.'}
+                    ? "The model couldn't start. Try again, or pick a smaller one on the Models tab."
+                    : 'This model runs on your phone. It works in airplane mode, and nothing you type is sent anywhere.'}
                 </Text>
                 {engineError ? (
                   <Button
                     theme={theme}
-                    label="Retry"
+                    label="Try again"
                     kind="secondary"
                     onPress={ensureChatEngine}
                   />
@@ -393,7 +528,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder={modelReady ? 'Ask anything — offline' : 'Download a model to chat'}
+          placeholder={modelReady ? 'Ask anything — works offline' : 'Get a model first'}
           placeholderTextColor={theme.inkMuted}
           editable={modelReady && !generating}
           multiline
@@ -413,8 +548,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
             width: 38,
             height: 38,
             borderRadius: 19,
-            backgroundColor:
-              generating || draft.trim() ? theme.accent : theme.fillStrong,
+            backgroundColor: generating || draft.trim() ? theme.accent : theme.fillStrong,
             alignItems: 'center',
             justifyContent: 'center',
             opacity: pressed ? 0.8 : 1,
@@ -422,10 +556,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
           {generating ? (
             <StopIcon color={theme.onAccent} size={19} />
           ) : (
-            <SendIcon
-              color={draft.trim() ? theme.onAccent : theme.inkMuted}
-              size={19}
-            />
+            <SendIcon color={draft.trim() ? theme.onAccent : theme.inkMuted} size={19} />
           )}
         </Pressable>
       </View>

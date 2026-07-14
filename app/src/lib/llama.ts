@@ -101,7 +101,10 @@ export interface StreamHandle {
 
 const SYSTEM_PROMPT =
   'You are PocketTune, a helpful assistant running fully on-device on this ' +
-  "phone's Arm CPU — no network, no cloud. Be concise and friendly.";
+  "phone's Arm CPU — no network, no cloud. Be concise and friendly. " +
+  'Format answers in Markdown. Always put code in a fenced block with its ' +
+  'language tag (```python), and use `backticks` for file names, commands and ' +
+  'identifiers inline.';
 
 export function chat(
   history: ChatMessage[],
