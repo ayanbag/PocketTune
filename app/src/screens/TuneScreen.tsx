@@ -22,6 +22,14 @@ function bytesGb(n: number): string {
   return `${(n / 1e9).toFixed(2)} GB`;
 }
 
+/** A reply length people actually feel — a short paragraph. */
+const REPLY_TOKENS = 100;
+
+/** Seconds to decode a REPLY_TOKENS reply, rounded so the bar reads cleanly. */
+function replySeconds(decodeTps: number): number {
+  return decodeTps > 0 ? Math.round((REPLY_TOKENS / decodeTps) * 10) / 10 : 0;
+}
+
 export function TuneScreen({ theme }: { theme: Theme }) {
   const tune = useStore(s => s.tune);
   const selectedModelId = useStore(s => s.selectedModelId);
@@ -46,6 +54,11 @@ export function TuneScreen({ theme }: { theme: Theme }) {
 
   // Live points belong to the model that was swept; don't show them under another.
   const livePoints = tune.liveModelId === selectedModelId ? tune.livePoints : [];
+
+  // Throughput restated as the wait a user actually feels.
+  const baselineSecs = run ? replySeconds(run.baseline.decodeTps) : 0;
+  const tunedSecs = run ? replySeconds(run.best.decodeTps) : 0;
+  const secsSaved = baselineSecs - tunedSecs;
 
   return (
     <ScrollView
@@ -259,6 +272,22 @@ export function TuneScreen({ theme }: { theme: Theme }) {
                   note: run.prefillGain >= 1.005 ? `${run.prefillGain.toFixed(2)}×` : undefined },
               ]}
             />
+            {baselineSecs > 0 && tunedSecs > 0 && (
+              <>
+                <Text style={[type.subhead, { color: theme.inkSecondary }]}>
+                  Waiting on a {REPLY_TOKENS}-token reply — shorter is better
+                </Text>
+                <HBars
+                  theme={theme}
+                  unit="s"
+                  data={[
+                    { label: 'llama.cpp default', value: baselineSecs },
+                    { label: `Tuned · ${run.best.label}`, value: tunedSecs, emphasized: true,
+                      note: secsSaved >= 0.1 ? `${secsSaved.toFixed(1)}s sooner` : undefined },
+                  ]}
+                />
+              </>
+            )}
           </Card>
         </View>
       )}
