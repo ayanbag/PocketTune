@@ -7,7 +7,13 @@
  * and published numbers are directly comparable.
  */
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import type { DeviceProfile, SweepPoint, TuneConfig, TuneRun } from '../types';
+import type {
+  AppliedConfig,
+  DeviceProfile,
+  SweepPoint,
+  TuneConfig,
+  TuneRun,
+} from '../types';
 import { bench, loadEngine } from './llama';
 import { PowerSampler } from './battery';
 
@@ -132,6 +138,7 @@ export function finishRun(
   )[0];
   const baseline = points.find(p => p.isBaseline) ?? points[0];
   return {
+    id: `r${Date.now()}`,
     timestamp: new Date().toISOString(),
     modelId,
     modelFile,
@@ -146,23 +153,31 @@ export function finishRun(
 
 // ---------------------------------------------------------------- persistence
 
-interface PersistedState {
-  appliedConfig: TuneConfig | null;
-  appliedModelId: string | null;
+export interface PersistedState {
+  /** applied config per model id — a sweep's winner only describes its model */
+  applied: Record<string, AppliedConfig>;
+  selectedModelId: string | null;
   history: TuneRun[];
 }
+
+const EMPTY_STATE: PersistedState = { applied: {}, selectedModelId: null, history: [] };
 
 export async function loadState(): Promise<PersistedState> {
   try {
     const raw = await RNFS.readFile(STATE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
+    // Runs written before runs carried ids can't be matched against an applied
+    // entry; drop them rather than render them as permanently un-applied.
+    const history: TuneRun[] = Array.isArray(parsed.history)
+      ? parsed.history.filter((r: TuneRun) => typeof r?.id === 'string')
+      : [];
     return {
-      appliedConfig: parsed.appliedConfig ?? null,
-      appliedModelId: parsed.appliedModelId ?? null,
-      history: Array.isArray(parsed.history) ? parsed.history : [],
+      applied: parsed.applied ?? {},
+      selectedModelId: parsed.selectedModelId ?? null,
+      history,
     };
   } catch {
-    return { appliedConfig: null, appliedModelId: null, history: [] };
+    return { ...EMPTY_STATE };
   }
 }
 

@@ -116,4 +116,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // react-native-background-downloader declares MMKV as compileOnly so it can
+    // coexist with react-native-mmkv; without this the downloader's persistence
+    // layer throws NoClassDefFoundError at runtime.
+    implementation("com.tencent:mmkv-shared:1.3.16")
 }

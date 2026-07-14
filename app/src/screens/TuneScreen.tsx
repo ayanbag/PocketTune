@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { radius, spacing, Theme, type } from '../theme';
-import { useStore } from '../store';
+import { runForModel, useStore } from '../store';
 import {
   Button,
   Card,
@@ -27,20 +27,25 @@ export function TuneScreen({ theme }: { theme: Theme }) {
   const selectedModelId = useStore(s => s.selectedModelId);
   const models = useStore(s => s.models);
   const modelList = useStore(s => s.modelList);
-  const appliedConfig = useStore(s => s.appliedConfig);
+  const applied = useStore(s => s.applied);
+  const history = useStore(s => s.history);
   const battery = useStore(s => s.battery);
   const { startTune, applyBest, setTab } = useStore();
   const [mode, setMode] = useState<'quick' | 'full'>('quick');
 
   const model = modelList.find(m => m.id === selectedModelId);
   const modelReady = models[selectedModelId]?.status === 'ready';
-  const run = tune.lastRun;
+  // A sweep describes exactly one model. Show the selected model's own newest
+  // run — never another model's, and never one whose file is gone.
+  const run = modelReady ? runForModel(history, selectedModelId) : null;
   const lowBattery = battery?.levelPct != null && battery.levelPct < 20;
 
-  const applied =
-    run != null &&
-    appliedConfig != null &&
-    JSON.stringify(appliedConfig) === JSON.stringify(run.best.config);
+  // "Applied" is about *this* run, not a config that happens to match one
+  // applied earlier — a fresh sweep always has to be applied deliberately.
+  const isApplied = run != null && applied[selectedModelId]?.runId === run.id;
+
+  // Live points belong to the model that was swept; don't show them under another.
+  const livePoints = tune.liveModelId === selectedModelId ? tune.livePoints : [];
 
   return (
     <ScrollView
@@ -132,7 +137,7 @@ export function TuneScreen({ theme }: { theme: Theme }) {
             </View>
           )}
 
-          {tune.livePoints.length > 0 && (
+          {livePoints.length > 0 && (
             <View>
               <Text style={[type.headline, { color: theme.inkPrimary, marginBottom: spacing.m }]}>
                 Decode speed by config
@@ -140,7 +145,7 @@ export function TuneScreen({ theme }: { theme: Theme }) {
               <HBars
                 theme={theme}
                 unit="t/s"
-                data={tune.livePoints.map(p => ({
+                data={livePoints.map(p => ({
                   label: p.label + (p.isBaseline ? '  (llama.cpp default)' : ''),
                   value: p.decodeTps,
                   emphasized: run != null && !tune.running && p.label === run.best.label,
@@ -219,11 +224,11 @@ export function TuneScreen({ theme }: { theme: Theme }) {
 
             <Button
               theme={theme}
-              label={applied ? 'Applied — open Chat' : 'Apply this config'}
-              kind={applied ? 'secondary' : 'primary'}
-              onPress={applyBest}
+              label={isApplied ? 'Applied — open Chat' : 'Apply this config'}
+              kind={isApplied ? 'secondary' : 'primary'}
+              onPress={isApplied ? () => setTab('chat') : applyBest}
               icon={
-                applied ? <CheckIcon color={theme.inkPrimary} size={18} /> : undefined
+                isApplied ? <CheckIcon color={theme.inkPrimary} size={18} /> : undefined
               }
             />
           </Card>

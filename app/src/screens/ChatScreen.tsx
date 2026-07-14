@@ -228,8 +228,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
   const generating = useStore(s => s.generating);
   const engineStatus = useStore(s => s.engineStatus);
   const engineError = useStore(s => s.engineError);
-  const appliedConfig = useStore(s => s.appliedConfig);
-  const appliedModelId = useStore(s => s.appliedModelId);
+  const applied = useStore(s => s.applied);
   const selectedModelId = useStore(s => s.selectedModelId);
   const models = useStore(s => s.models);
   const sessionCount = useStore(s => s.chatSessions.length);
@@ -238,12 +237,12 @@ export function ChatScreen({ theme }: { theme: Theme }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const modelId =
-    appliedModelId && models[appliedModelId]?.status === 'ready'
-      ? appliedModelId
-      : selectedModelId;
+  const modelId = selectedModelId;
   const model = useStore(s => s.modelList.find(m => m.id === modelId));
   const modelReady = models[modelId]?.status === 'ready';
+  // Only this model's own applied config counts — an untuned model runs on
+  // defaults, so don't badge it with a config measured on a different one.
+  const tunedConfig = applied[modelId]?.config ?? null;
 
   const tpsSeries = messages
     .filter(m => m.role === 'assistant' && m.tps != null && m.tps > 0)
@@ -291,8 +290,8 @@ export function ChatScreen({ theme }: { theme: Theme }) {
         {modelReady && (
           <Row style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
             {model && <Chip theme={theme} label={`${model.name} ${model.quant}`} tone="accent" />}
-            {appliedConfig ? (
-              <Chip theme={theme} label={`Tuned · ${configLabel(appliedConfig)}`} tone="good" />
+            {tunedConfig ? (
+              <Chip theme={theme} label={`Tuned · ${configLabel(tunedConfig)}`} tone="good" />
             ) : (
               <Chip theme={theme} label="Untuned defaults" tone="off" />
             )}

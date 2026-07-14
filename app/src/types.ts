@@ -86,6 +86,8 @@ export interface SweepPoint {
 }
 
 export interface TuneRun {
+  /** stable identity of this sweep — what "applied" points at */
+  id: string;
   timestamp: string;
   modelId: string;
   modelFile: string;
@@ -95,6 +97,18 @@ export interface TuneRun {
   baseline: SweepPoint;
   decodeGain: number;
   prefillGain: number;
+}
+
+/**
+ * A config the user applied, remembered per model. A sweep measures one model
+ * on one phone, so its winner is only meaningful for that model — Qwen's best
+ * thread count is not SmolLM2's.
+ */
+export interface AppliedConfig {
+  config: TuneConfig;
+  /** the sweep this came from, so a fresh sweep isn't shown as already applied */
+  runId: string;
+  at: string;
 }
 
 export interface ChatMessage {

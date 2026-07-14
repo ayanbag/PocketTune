@@ -193,6 +193,46 @@ Build-time levers arrive in the app pre-baked inside llama.rn's feature-dispatch
 runtime levers are the ones no binary can decide in advance, so the app measures them on the
 phone it's installed on. Raw data for every measured claim: [results/](results/).
 
+## Where the AI optimization happens
+
+The Mobile AI track asks for AI *"optimized for on-device constraints — performance, latency,
+battery efficiency, and local AI experiences on Arm-powered phones."* PocketTune optimizes LLM
+inference on Arm CPUs at two levels, and it is worth being precise about which level produces which
+gain, because they are not the same size and they do not reach the user the same way.
+
+**Tier 1 — build-time: arm64 codegen and weight layout.** This is where the 3.88×–5.59× lives.
+`-march=armv8.2-a+dotprod(+i8mm)` lets the compiler emit the SIMD instructions the chip actually
+has, and llama.cpp's Q4_0 repack rewrites the weights into the layout those instructions want. The
+harness proves this by building the *same* llama.cpp source seven ways and running the ladder on
+each phone, so each lever is isolated rather than asserted ([results/](results/)). In the app, this
+tier is already active but invisible: llama.rn ships six arm64 kernel libraries and the runtime
+picks one from `/proc/cpuinfo` at startup — `v8_2_dotprod_i8mm` on the Nothing 2a, `v8_2_dotprod` on
+the Pixel and the A34. The **Device** tab shows you which one your phone got. No user choice is
+involved, and that is correct: the alternatives either crash (`i8mm` on a chip without it → SIGILL,
+which we hit) or are simply slower.
+
+**Tier 2 — runtime: the config no binary can decide in advance.** Thread count, flash attention, and
+KV-cache quantization cannot be baked in, because the right answer is a property of the *phone*, not
+the build. Our three devices disagree — best thread count is 2 / 2 / **4** — and on the A34 the
+answer even flips when the binary changes (6 threads on the generic build, 2 once arch flags are
+on). A 5th thread on the Pixel costs 29% of prefill. This is the tier the app measures on-device,
+scores, and applies, and it is why the product is a measurement loop rather than a lookup table.
+
+Mapped onto the challenge's own list of what counts as optimization:
+
+| The challenge asks for | PocketTune's answer | Evidence |
+|---|---|---|
+| *Improved tokens/sec, TTFT, or latency* | **3.88×–5.59× prefill**, up to **2.04× decode**, on three real phones | [results/](results/), [Headline result](#headline-result) |
+| *Battery efficiency* | **tokens per joule** sampled from the battery rail, per config, in the on-device sweep | Tune tab; `app/src/lib/battery.ts` |
+| *Optimize an existing framework/library/app to run better on Arm* | Arm-aware llama.cpp build ladder + KleidiAI, driven per-device | [harness/](harness/), `vendor/llama.cpp/build-android-*` |
+| *Improved tools, workflows, docs* | one-command harness that adds a new phone and emits the JSON the app and site consume | [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md) |
+| *Local AI experience under on-device constraints* | fully offline chat on the applied config; nothing leaves the phone after download | Chat tab |
+
+We did not train, fine-tune, or invent a model, and we did not write new CPU kernels — the optimization is of *AI inference on Arm silicon*, which is what the
+track asks for. KleidiAI is in the ladder and came out **flat on all three phones** for Q4_0; it is
+reported anyway ([below](#kleidiai-no-measurable-gain-on-any-of-the-three-phones)), because a project
+whose thesis is "measure, don't assume" does not get to hide the lever that measured zero.
+
 ## Reproduce the published numbers (headless harness)
 
 The numbers in `results/` come from `llama-bench` builds driven over adb — no app involved, so

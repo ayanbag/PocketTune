@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand';
 import type {
+  AppliedConfig,
   BatteryState,
   ChatMessage,
   ChatSession,
@@ -25,8 +26,10 @@ import {
   downloadModel,
   downloadedSize,
   ensureModelsDir,
+  isAborted,
   isDownloaded,
   modelPath,
+  reattachDownloads,
 } from './lib/models';
 import {
   customModelFromUrl,
@@ -54,7 +57,8 @@ interface TuneState {
   progress: number;
   currentLabel: string | null;
   livePoints: SweepPoint[];
-  lastRun: TuneRun | null;
+  /** which model the live points belong to — they are not transferable */
+  liveModelId: string | null;
   error: string | null;
 }
 
@@ -69,8 +73,8 @@ interface AppState {
   models: Record<string, ModelState>;
   selectedModelId: string;
 
-  appliedConfig: TuneConfig | null;
-  appliedModelId: string | null;
+  /** applied config per model id — Qwen's winner is not SmolLM2's winner */
+  applied: Record<string, AppliedConfig>;
   history: TuneRun[];
 
   tune: TuneState;
@@ -119,6 +123,54 @@ const emptyModel = (): ModelState => ({
 const findModel = (list: ModelInfo[], id: string): ModelInfo | undefined =>
   list.find(m => m.id === id);
 
+/** Newest sweep for a model. History is newest-first. */
+export const runForModel = (history: TuneRun[], modelId: string): TuneRun | null =>
+  history.find(r => r.modelId === modelId) ?? null;
+
+type Set = (fn: (s: AppState) => Partial<AppState>) => void;
+type Get = () => AppState;
+
+const persist = (get: Get): Promise<void> =>
+  saveState({
+    applied: get().applied,
+    selectedModelId: get().selectedModelId,
+    history: get().history,
+  });
+
+const patchModel = (set: Set, id: string, patch: Partial<ModelState>): void =>
+  set(s => ({
+    models: { ...s.models, [id]: { ...(s.models[id] ?? emptyModel()), ...patch } },
+  }));
+
+/**
+ * Owns the lifecycle of one in-flight download, whether it was just started or
+ * re-attached at boot after the background service carried it while the app
+ * was dead.
+ */
+function trackDownload(model: ModelInfo, handle: DownloadHandle, set: Set): void {
+  const id = model.id;
+  downloads.set(id, handle);
+  handle.promise
+    .then(async () => {
+      // Trust the disk over the catalog guess.
+      const actual = await downloadedSize(model);
+      if (actual) {
+        set(s => ({
+          modelList: s.modelList.map(m => (m.id === id ? { ...m, sizeBytes: actual } : m)),
+        }));
+      }
+      patchModel(set, id, { status: 'ready', progress: 1, path: modelPath(model) });
+    })
+    .catch(err =>
+      patchModel(set, id, {
+        status: 'none',
+        progress: 0,
+        error: isAborted(err) ? null : String(err?.message ?? err),
+      }),
+    )
+    .finally(() => downloads.delete(id));
+}
+
 export const useStore = create<AppState>((set, get) => ({
   booted: false,
   tab: 'device',
@@ -127,8 +179,7 @@ export const useStore = create<AppState>((set, get) => ({
   modelList: [],
   models: {},
   selectedModelId: CATALOG[0].id,
-  appliedConfig: null,
-  appliedModelId: null,
+  applied: {},
   history: [],
   tune: {
     running: false,
@@ -136,7 +187,7 @@ export const useStore = create<AppState>((set, get) => ({
     progress: 0,
     currentLabel: null,
     livePoints: [],
-    lastRun: null,
+    liveModelId: null,
     error: null,
   },
   engineStatus: 'idle',
@@ -176,8 +227,8 @@ export const useStore = create<AppState>((set, get) => ({
         };
       }
       const selected =
-        persisted.appliedModelId && models[persisted.appliedModelId]?.status === 'ready'
-          ? persisted.appliedModelId
+        persisted.selectedModelId && models[persisted.selectedModelId]?.status === 'ready'
+          ? persisted.selectedModelId
           : modelList.find(m => models[m.id].status === 'ready')?.id ??
             pickRecommended(modelList, profile)?.id ??
             CATALOG[0].id;
@@ -188,12 +239,23 @@ export const useStore = create<AppState>((set, get) => ({
         modelList,
         models,
         selectedModelId: selected,
-        appliedConfig: persisted.appliedConfig,
-        appliedModelId: persisted.appliedModelId,
+        applied: persisted.applied,
         history: persisted.history,
         chatSessions,
-        tune: { ...get().tune, lastRun: persisted.history[0] ?? null },
       });
+
+      // The foreground service may have carried a download while the app was
+      // backgrounded or killed — adopt those tasks rather than orphaning them.
+      const attached = await reattachDownloads(
+        id => findModel(get().modelList, id),
+        (id, fraction, bytesWritten) => patchModel(set, id, { progress: fraction, bytesWritten }),
+      );
+      for (const { id, handle } of attached) {
+        const model = findModel(get().modelList, id);
+        if (!model) continue;
+        patchModel(set, id, { status: 'downloading', error: null });
+        trackDownload(model, handle, set);
+      }
     } catch {
       // Boot must never leave the app on a blank screen.
       set({ booted: true });
@@ -207,39 +269,30 @@ export const useStore = create<AppState>((set, get) => ({
     if (battery) set({ battery });
   },
 
-  selectModel: id => set({ selectedModelId: id }),
+  // Each model carries its own applied config, so switching models means the
+  // engine must be rebuilt under that model's config, not the previous one's.
+  selectModel: id => {
+    if (get().selectedModelId === id || get().tune.running) return;
+    set({ selectedModelId: id, engineStatus: 'idle' });
+    persist(get);
+  },
 
   startDownload: id => {
     const model = findModel(get().modelList, id);
     if (!model || !model.url || downloads.has(id)) return;
-    const update = (patch: Partial<ModelState>) =>
-      set(s => ({ models: { ...s.models, [id]: { ...(s.models[id] ?? emptyModel()), ...patch } } }));
-    update({ status: 'downloading', progress: 0, error: null });
-    const handle = downloadModel(model, (fraction, bytesWritten) =>
-      update({ progress: fraction, bytesWritten }),
+    set(s => ({
+      models: {
+        ...s.models,
+        [id]: { ...(s.models[id] ?? emptyModel()), status: 'downloading', progress: 0, error: null },
+      },
+    }));
+    trackDownload(
+      model,
+      downloadModel(model, (fraction, bytesWritten) =>
+        patchModel(set, id, { progress: fraction, bytesWritten }),
+      ),
+      set,
     );
-    downloads.set(id, handle);
-    handle.promise
-      .then(async () => {
-        // Trust the disk over the catalog guess.
-        const actual = await downloadedSize(model);
-        if (actual) {
-          set(s => ({
-            modelList: s.modelList.map(m =>
-              m.id === id ? { ...m, sizeBytes: actual } : m,
-            ),
-          }));
-        }
-        update({ status: 'ready', progress: 1, path: modelPath(model) });
-      })
-      .catch(err =>
-        update({
-          status: 'none',
-          progress: 0,
-          error: err?.message?.includes('aborted') ? null : String(err?.message ?? err),
-        }),
-      )
-      .finally(() => downloads.delete(id));
   },
 
   cancelDownload: id => {
@@ -255,26 +308,38 @@ export const useStore = create<AppState>((set, get) => ({
 
   removeModel: async id => {
     const model = findModel(get().modelList, id);
-    if (!model) return;
+    if (!model || get().tune.running) return;
     await releaseEngine().catch(() => {});
     await deleteModel(model);
-    if (model.source === 'sideloaded') {
-      // Nothing to re-download from — drop the entry entirely.
-      set(s => {
-        const models = { ...s.models };
+    // Measurements belong to the model they were measured on. Once the file is
+    // gone, its sweeps and its applied config are no longer about anything on
+    // this phone — keeping them would recommend a config for a missing model.
+    set(s => {
+      const models = { ...s.models };
+      if (model.source === 'sideloaded') {
+        // Nothing to re-download from — drop the entry entirely.
         delete models[id];
-        return {
-          engineStatus: 'idle',
-          modelList: s.modelList.filter(m => m.id !== id),
-          models,
-        };
-      });
-    } else {
-      set(s => ({
+      } else {
+        models[id] = emptyModel();
+      }
+      const applied = { ...s.applied };
+      delete applied[id];
+      return {
         engineStatus: 'idle',
-        models: { ...s.models, [id]: emptyModel() },
-      }));
-    }
+        modelList:
+          model.source === 'sideloaded'
+            ? s.modelList.filter(m => m.id !== id)
+            : s.modelList,
+        models,
+        applied,
+        history: s.history.filter(r => r.modelId !== id),
+        tune:
+          s.tune.liveModelId === id
+            ? { ...s.tune, livePoints: [], liveModelId: null, progress: 0, error: null }
+            : s.tune,
+      };
+    });
+    await persist(get);
   },
 
   addCustomModel: async url => {
@@ -336,7 +401,7 @@ export const useStore = create<AppState>((set, get) => ({
         progress: 0,
         currentLabel: null,
         livePoints: [],
-        lastRun: get().tune.lastRun,
+        liveModelId: selectedModelId,
         error: null,
       },
     });
@@ -359,14 +424,12 @@ export const useStore = create<AppState>((set, get) => ({
       const history = [run, ...get().history].slice(0, 20);
       set(s => ({
         history,
-        engineStatus: 'ready',
-        tune: { ...s.tune, running: false, progress: 1, lastRun: run },
+        // The context is still on the last config the sweep tried, not the
+        // winner — force Chat to reload rather than inherit a stray config.
+        engineStatus: 'idle',
+        tune: { ...s.tune, running: false, progress: 1 },
       }));
-      await saveState({
-        appliedConfig: get().appliedConfig,
-        appliedModelId: get().appliedModelId,
-        history,
-      });
+      await persist(get);
     } catch (err) {
       set(s => ({
         engineStatus: 'idle',
@@ -380,39 +443,39 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   applyBest: async () => {
-    const { tune } = get();
-    const run = tune.lastRun;
-    if (!run) return;
+    const { history, models, selectedModelId } = get();
+    const run = runForModel(history, selectedModelId);
+    if (!run || models[run.modelId]?.status !== 'ready') return;
     // Start a fresh session under the new config; the old transcript stays
     // in the archive rather than being wiped.
-    set({
-      appliedConfig: run.best.config,
-      appliedModelId: run.modelId,
-      selectedModelId: run.modelId,
+    set(s => ({
+      applied: {
+        ...s.applied,
+        [run.modelId]: {
+          config: run.best.config,
+          runId: run.id,
+          at: new Date().toISOString(),
+        },
+      },
+      // Chat reloads the context under the newly applied config.
+      engineStatus: 'idle',
       chatMessages: [],
       activeChatId: null,
-    });
-    await saveState({
-      appliedConfig: run.best.config,
-      appliedModelId: run.modelId,
-      history: get().history,
-    });
+    }));
+    await persist(get);
   },
 
   ensureChatEngine: async () => {
-    const { selectedModelId, models, modelList, appliedConfig, appliedModelId, profile } =
-      get();
-    const modelId =
-      appliedModelId && models[appliedModelId]?.status === 'ready'
-        ? appliedModelId
-        : selectedModelId;
+    const { selectedModelId: modelId, models, modelList, applied, profile } = get();
     const model = findModel(modelList, modelId);
     if (!model || models[modelId]?.status !== 'ready') {
       set({ engineStatus: 'idle' });
       return;
     }
+    // Only this model's own applied config counts. An untuned model runs on a
+    // topology-derived default, never on another model's winner.
     const config: TuneConfig =
-      appliedConfig ??
+      applied[modelId]?.config ??
       (profile
         ? { nThreads: Math.max(profile.bigCoreIds.length, 4), flashAttn: 'auto', kvCache: 'f16' }
         : BASELINE_CONFIG);
@@ -510,21 +573,10 @@ function persistActiveSession(
   set: (fn: (s: AppState) => Partial<AppState>) => void,
   get: () => AppState,
 ): void {
-  const {
-    chatMessages,
-    activeChatId,
-    appliedConfig,
-    appliedModelId,
-    selectedModelId,
-    models,
-    modelList,
-  } = get();
+  const { chatMessages, activeChatId, applied, selectedModelId: modelId, modelList } = get();
   if (!chatMessages.length) return;
-  const modelId =
-    appliedModelId && models[appliedModelId]?.status === 'ready'
-      ? appliedModelId
-      : selectedModelId;
   const model = findModel(modelList, modelId);
+  const config = applied[modelId]?.config ?? null;
   const now = new Date().toISOString();
   const id = activeChatId ?? `c${Date.now()}`;
   set(s => {
@@ -535,8 +587,8 @@ function persistActiveSession(
       updatedAt: now,
       modelId,
       modelFile: model?.file ?? modelId,
-      config: appliedConfig,
-      tuned: appliedConfig != null,
+      config,
+      tuned: config != null,
       messages: chatMessages,
     };
     const rest = s.chatSessions.filter(x => x.id !== id);
