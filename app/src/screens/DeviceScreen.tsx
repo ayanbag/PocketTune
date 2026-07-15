@@ -153,7 +153,7 @@ export function DeviceScreen({ theme }: { theme: Theme }) {
           <Divider theme={theme} inset={0} />
           <Text style={[type.subhead, { color: theme.inkSecondary, marginTop: spacing.m }]}>
             {profile.hasI8mm
-              ? 'This phone has int8 matrix-multiply hardware. Q4_0 weights are repacked at load time into an i8mm-friendly layout — the sweep on the Lab tab shows what that is worth.'
+              ? 'This phone has int8 matrix-multiply hardware. Q4_0 weights are repacked at load time into an i8mm-friendly layout — run the tuner to see what that is worth.'
               : 'Without i8mm, inference uses the dotprod path. Quantization choice and thread placement matter even more here — run the tuner to find the best setup.'}
           </Text>
         </Card>
@@ -191,14 +191,18 @@ export function DeviceScreen({ theme }: { theme: Theme }) {
               </Text>
             </Row>
           </Card>
-        ) : battery?.levelPct == null && battery?.temperatureC == null ? (
+        ) : (
           <Card theme={theme} style={{ marginTop: spacing.m }}>
-            <Text style={[type.subhead, { color: theme.inkSecondary }]}>
-              This device restricts battery telemetry (sysfs hidden from apps).
-              Speed tuning works fully; tokens-per-joule won't be reported here.
-            </Text>
+            <Row style={{ gap: 10, alignItems: 'flex-start' }}>
+              <BoltIcon color={theme.inkMuted} size={18} />
+              <Text style={[type.subhead, { color: theme.inkSecondary, flex: 1 }]}>
+                This phone hides its battery current sensor from apps (an
+                Android security policy), so the tuner can't compute tokens per
+                joule here. Speed tuning works fully.
+              </Text>
+            </Row>
           </Card>
-        ) : null}
+        )}
       </View>
 
       <View>

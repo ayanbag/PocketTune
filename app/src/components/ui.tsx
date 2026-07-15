@@ -29,7 +29,7 @@ export function Card({
         {
           backgroundColor: theme.surface,
           borderColor: theme.hairline,
-          shadowOpacity: theme.dark ? 0 : 0.05,
+          shadowOpacity: theme.dark ? 0 : 0.06,
         },
         style,
       ]}>
@@ -123,7 +123,11 @@ export function Button({
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.75 : 1 },
+        {
+          backgroundColor: bg,
+          opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
+          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
+        },
         style,
       ]}>
       {loading ? (
@@ -253,23 +257,24 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: spacing.xl,
     shadowColor: '#000',
-    shadowRadius: 12,
+    shadowRadius: 24,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
+  },
+  chip: {
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  chip: {
-    borderRadius: radius.chip,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
   button: {
-    borderRadius: radius.control + 2,
+    borderRadius: radius.pill,
+    minHeight: 48,
     paddingVertical: 13,
-    paddingHorizontal: 18,
+    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -277,14 +282,16 @@ const styles = StyleSheet.create({
   },
   segTrack: {
     flexDirection: 'row',
-    borderRadius: radius.control,
+    borderRadius: radius.control + 2,
     padding: 2,
+    minHeight: 44,
   },
   segItem: {
     flex: 1,
-    paddingVertical: 7,
-    borderRadius: radius.control - 2,
+    paddingVertical: 10,
+    borderRadius: radius.control,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   progressTrack: {
     height: 6,

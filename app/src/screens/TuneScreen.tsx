@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   Chip,
+  Divider,
   Row,
   SectionHeader,
   Segmented,
@@ -199,41 +200,115 @@ export function TuneScreen({ theme }: { theme: Theme }) {
               </View>
             </Row>
 
-            <Row style={{ gap: spacing.m }}>
+            {run.decodeGain >= 1.05 ? (
+              <Row style={{ alignItems: 'center', gap: 12 }}>
+                <Text style={[type.largeTitle, { color: theme.inkPrimary }]}>
+                  {run.decodeGain.toFixed(2)}×
+                </Text>
+                <Text style={[type.subhead, { color: theme.inkSecondary, flex: 1 }]}>
+                  faster replies than the llama.cpp default
+                </Text>
+              </Row>
+            ) : (
+              <Text style={[type.subhead, { color: theme.inkSecondary }]}>
+                Default config already near-optimal on this phone
+              </Text>
+            )}
+
+            <Divider theme={theme} />
+
+            <Row style={{ gap: spacing.xl }}>
               <View style={{ flex: 1 }}>
                 <Text style={[type.subhead, { color: theme.inkSecondary }]}>Decode</Text>
-                <Text style={[type.statValue, { color: theme.inkPrimary }]}>
+                <Text style={[type.statValue, { color: theme.inkPrimary, marginTop: 2 }]}>
                   {run.best.decodeTps.toFixed(1)}
                   <Text style={[type.subhead, { color: theme.inkMuted }]}> t/s</Text>
                 </Text>
-                <Text style={[type.footnote, { color: theme.goodText, fontWeight: '600' }]}>
+                <Text
+                  style={[
+                    type.footnote,
+                    { color: theme.goodText, fontWeight: '600', marginTop: 2 },
+                  ]}>
                   {run.decodeGain >= 1.005
-                    ? `${((run.decodeGain - 1) * 100).toFixed(0)}% vs default`
+                    ? `+${((run.decodeGain - 1) * 100).toFixed(0)}% vs default`
                     : 'matches default'}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[type.subhead, { color: theme.inkSecondary }]}>Prefill</Text>
-                <Text style={[type.statValue, { color: theme.inkPrimary }]}>
+                <Text style={[type.statValue, { color: theme.inkPrimary, marginTop: 2 }]}>
                   {run.best.prefillTps.toFixed(0)}
                   <Text style={[type.subhead, { color: theme.inkMuted }]}> t/s</Text>
                 </Text>
-                <Text style={[type.footnote, { color: theme.goodText, fontWeight: '600' }]}>
+                <Text
+                  style={[
+                    type.footnote,
+                    { color: theme.goodText, fontWeight: '600', marginTop: 2 },
+                  ]}>
                   {run.prefillGain >= 1.005
-                    ? `${((run.prefillGain - 1) * 100).toFixed(0)}% vs default`
+                    ? `+${((run.prefillGain - 1) * 100).toFixed(0)}% vs default`
                     : 'matches default'}
                 </Text>
               </View>
-              {run.best.tokensPerJoule != null && (
-                <View style={{ flex: 1 }}>
-                  <Text style={[type.subhead, { color: theme.inkSecondary }]}>Efficiency</Text>
-                  <Text style={[type.statValue, { color: theme.inkPrimary }]}>
-                    {run.best.tokensPerJoule.toFixed(1)}
-                  </Text>
-                  <Text style={[type.footnote, { color: theme.inkMuted }]}>tokens / joule</Text>
-                </View>
-              )}
             </Row>
+
+            <Row style={{ gap: spacing.xl }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[type.subhead, { color: theme.inkSecondary }]}>Efficiency</Text>
+                <Text
+                  style={[
+                    type.statValue,
+                    {
+                      color:
+                        run.best.tokensPerJoule != null ? theme.inkPrimary : theme.inkMuted,
+                      marginTop: 2,
+                    },
+                  ]}>
+                  {run.best.tokensPerJoule != null ? (
+                    <>
+                      {run.best.tokensPerJoule.toFixed(1)}
+                      <Text style={[type.subhead, { color: theme.inkMuted }]}> tok/J</Text>
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </Text>
+                <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
+                  {run.best.tokensPerJoule != null ? 'tokens per joule' : 'not measurable'}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[type.subhead, { color: theme.inkSecondary }]}>Power</Text>
+                <Text
+                  style={[
+                    type.statValue,
+                    {
+                      color: run.best.watts != null ? theme.inkPrimary : theme.inkMuted,
+                      marginTop: 2,
+                    },
+                  ]}>
+                  {run.best.watts != null ? (
+                    <>
+                      {run.best.watts.toFixed(1)}
+                      <Text style={[type.subhead, { color: theme.inkMuted }]}> W</Text>
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </Text>
+                <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
+                  {run.best.watts != null ? 'draw during decode' : 'not measurable'}
+                </Text>
+              </View>
+            </Row>
+
+            {run.best.tokensPerJoule == null && (
+              <Text style={[type.footnote, { color: theme.inkMuted }]}>
+                Android hides this phone's battery current sensor from apps, so
+                tokens per joule can't be measured here. Speed results are
+                unaffected — the Device tab shows what this phone exposes.
+              </Text>
+            )}
 
             <Button
               theme={theme}
@@ -312,6 +387,43 @@ export function TuneScreen({ theme }: { theme: Theme }) {
               Tokens generated per joule from the battery rail during decode —
               the config that wins on speed doesn't always win on battery.
             </Text>
+          </Card>
+        </View>
+      )}
+
+      {history.length > 0 && (
+        <View>
+          <SectionHeader theme={theme} title="Previous sweeps" />
+          <Card theme={theme} style={{ gap: spacing.m }}>
+            {history.slice(0, 5).map((h, i) => (
+              <View key={h.id}>
+                {i > 0 && <Divider theme={theme} />}
+                <Row
+                  style={{ justifyContent: 'space-between', marginTop: i > 0 ? spacing.m : 0 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[type.headline, { color: theme.inkPrimary }]}>
+                      {h.best.decodeTps.toFixed(1)} t/s decode
+                    </Text>
+                    <Text style={[type.footnote, { color: theme.inkMuted, marginTop: 2 }]}>
+                      {h.best.label} · {h.modelFile}
+                    </Text>
+                    <Text style={[type.footnote, { color: theme.inkMuted }]}>
+                      {new Date(h.timestamp).toLocaleString()} · {h.mode} sweep ·{' '}
+                      {h.points.length} configs
+                    </Text>
+                  </View>
+                  <Chip
+                    theme={theme}
+                    label={
+                      h.decodeGain >= 1.005
+                        ? `+${((h.decodeGain - 1) * 100).toFixed(0)}%`
+                        : '±0%'
+                    }
+                    tone={h.decodeGain >= 1.005 ? 'good' : 'neutral'}
+                  />
+                </Row>
+              </View>
+            ))}
           </Card>
         </View>
       )}

@@ -49,7 +49,7 @@ import {
 } from './lib/tuner';
 
 export type EngineStatus = 'idle' | 'loading' | 'ready' | 'error';
-export type TabId = 'device' | 'models' | 'tune' | 'chat' | 'lab';
+export type TabId = 'device' | 'models' | 'tune' | 'chat';
 
 interface TuneState {
   running: boolean;

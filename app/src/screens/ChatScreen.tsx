@@ -538,7 +538,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
             paddingVertical: 8,
             paddingRight: 8,
             color: theme.inkPrimary,
-            fontSize: 15,
+            fontSize: 16,
           }}
         />
         <Pressable

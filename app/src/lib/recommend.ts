@@ -60,7 +60,10 @@ export function assessFit(m: ModelInfo, profile: DeviceProfile | null): ModelFit
   const budget = memGb >= 10 ? 3.5 : memGb >= 6 ? 2 : 1.3;
   if (b != null) {
     if (b <= budget) {
-      score += 2;
+      // Proportional, not flat: within budget, the largest (most capable)
+      // model wins — a 12 GB phone should get 3B, not the same 1B a 4 GB
+      // phone gets.
+      score += 2 * (b / budget);
     } else {
       score -= 1;
       why.push(`${b.toFixed(1)}B params will decode slowly on this CPU`);

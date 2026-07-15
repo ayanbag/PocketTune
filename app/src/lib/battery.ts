@@ -1,18 +1,25 @@
 /**
  * Battery + power readings, layered by trustworthiness:
  *
- * 1. sysfs power_supply rails — the only source of instantaneous current, so
- *    tokens-per-joule depends on it. The node is probed (battery/bms/vendor
- *    names differ) instead of hardcoding /battery, and the result is cached.
- * 2. react-native-device-info (official BatteryManager API) — fallback for
- *    level/charging on devices whose SELinux policy hides sysfs from apps.
- * 3. Thermal zones — fallback for temperature when the battery node has none.
+ * 1. PocketTunePower (our ~40-line Kotlin module) — instantaneous current via
+ *    the official BatteryManager API, the only channel SELinux leaves open to
+ *    apps. Tokens-per-joule depends on this on modern Android.
+ * 2. sysfs power_supply rails — fallback for current on devices that still
+ *    expose the node, and the source for temperature. Probed (battery/bms/
+ *    vendor names differ) instead of hardcoding /battery, result cached.
+ * 3. react-native-device-info (level/charging) and thermal zones (temp) —
+ *    fallbacks when sysfs is hidden.
  *
  * Everything still degrades to null; the UI says "restricted" rather than
  * showing a blank.
  */
+import { NativeModules } from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import type { BatteryState } from '../types';
+
+/** Our own PowerModule.kt; absent on a stale build that predates it. */
+const Power: { read: () => Promise<{ currentUa: number | null; voltageMv: number | null }> } | null =
+  NativeModules.PocketTunePower ?? null;
 
 // Optional native module: keep the app alive if the prebuilt isn't linked yet
 // (e.g. metro reload before the next gradle build).
@@ -98,11 +105,35 @@ async function findBatteryThermalZone(): Promise<string | null> {
 }
 
 /**
- * Instantaneous battery draw in watts.
- * current_now is µA on most kernels but mA on some MTK ones; values under
- * 20000 are assumed mA. Sign conventions differ per vendor, so use |I|.
+ * Current is µA per the docs (and most kernels) but mA on some MTK devices;
+ * values under 20000 are assumed mA. Sign conventions differ per vendor
+ * (negative usually means discharging), so use |I|.
  */
+function toWatts(currentRaw: number, volts: number): number | null {
+  const amps =
+    Math.abs(currentRaw) < 20000
+      ? Math.abs(currentRaw) / 1e3
+      : Math.abs(currentRaw) / 1e6;
+  const watts = amps * volts;
+  return watts > 0 && watts < 50 ? watts : null;
+}
+
+/** Instantaneous draw via the official BatteryManager API (PowerModule.kt). */
+async function apiWatts(): Promise<number | null> {
+  if (!Power) return null;
+  try {
+    const r = await Power.read();
+    if (r?.currentUa == null || r?.voltageMv == null) return null;
+    return toWatts(r.currentUa, r.voltageMv / 1e3);
+  } catch {
+    return null;
+  }
+}
+
+/** Instantaneous battery draw in watts: BatteryManager first, sysfs fallback. */
 export async function readWatts(): Promise<number | null> {
+  const api = await apiWatts();
+  if (api != null) return api;
   const base = await findBatteryBase();
   if (!base) return null;
   const [currentRaw, voltageRaw] = await Promise.all([
@@ -110,12 +141,8 @@ export async function readWatts(): Promise<number | null> {
     readNum(`${base}/voltage_now`),
   ]);
   if (currentRaw == null || voltageRaw == null) return null;
-  const amps = Math.abs(currentRaw) < 20000
-    ? Math.abs(currentRaw) / 1e3
-    : Math.abs(currentRaw) / 1e6;
   const volts = voltageRaw > 1e5 ? voltageRaw / 1e6 : voltageRaw / 1e3;
-  const watts = amps * volts;
-  return watts > 0 && watts < 50 ? watts : null;
+  return toWatts(currentRaw, volts);
 }
 
 async function readTempC(base: string | null): Promise<number | null> {

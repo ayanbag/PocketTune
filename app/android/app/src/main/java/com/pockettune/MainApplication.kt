@@ -14,8 +14,9 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // Battery current via the official BatteryManager API — the one
+          // reading SELinux blocks from the JS-reachable filesystem path.
+          add(PowerPackage())
         },
     )
   }

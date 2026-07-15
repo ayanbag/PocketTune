@@ -12,19 +12,17 @@ import {
 import { spacing, type as t, useTheme } from './src/theme';
 import { TabId, useStore } from './src/store';
 import { useKeyboardHeight } from './src/lib/keyboard';
-import { BoxIcon, ChatIcon, ChipIcon, LabIcon, TuneIcon } from './src/components/icons';
+import { BoxIcon, ChatIcon, ChipIcon, TuneIcon } from './src/components/icons';
 import { DeviceScreen } from './src/screens/DeviceScreen';
 import { ModelsScreen } from './src/screens/ModelsScreen';
 import { TuneScreen } from './src/screens/TuneScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
-import { LabScreen, hasPublishedEvidence } from './src/screens/LabScreen';
 
 const TABS: { id: TabId; label: string; Icon: typeof ChipIcon }[] = [
   { id: 'device', label: 'Device', Icon: ChipIcon },
   { id: 'models', label: 'Models', Icon: BoxIcon },
   { id: 'tune', label: 'Tune', Icon: TuneIcon },
   { id: 'chat', label: 'Chat', Icon: ChatIcon },
-  { id: 'lab', label: 'Lab', Icon: LabIcon },
 ];
 
 function Root() {
@@ -74,9 +72,6 @@ function Root() {
             <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
               <ChatScreen theme={theme} />
             </View>
-            <View style={{ flex: 1, display: tab === 'lab' ? 'flex' : 'none' }}>
-              <LabScreen theme={theme} />
-            </View>
           </>
         )}
       </View>
@@ -93,13 +88,11 @@ function Root() {
         {TABS.map(({ id, label, Icon }) => {
           const active = tab === id;
           const busy = id === 'tune' && tuneRunning;
-          const disabled = id === 'lab' && !hasPublishedEvidence;
           return (
             <Pressable
               key={id}
-              disabled={disabled}
               onPress={() => setTab(id)}
-              style={[styles.tabItem, disabled && { opacity: 0.35 }]}
+              style={styles.tabItem}
               android_ripple={{ color: theme.fill, borderless: true }}>
               <Icon color={active ? theme.accent : theme.inkMuted} size={23} />
               <Text
@@ -145,5 +138,7 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
+    minHeight: 44,
+    paddingTop: 3,
   },
 });

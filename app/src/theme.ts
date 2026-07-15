@@ -106,15 +106,15 @@ export const radius = {
   chip: 8,
 } as const;
 
-/** iOS-style type scale (system font). */
+/** iOS-style type scale (system font), sized to Apple HIG steps. */
 export const type = {
-  largeTitle: { fontSize: 32, fontWeight: '700' as const, letterSpacing: 0.2 },
-  title2: { fontSize: 21, fontWeight: '700' as const, letterSpacing: 0.1 },
-  headline: { fontSize: 16, fontWeight: '600' as const },
-  body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
-  subhead: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
-  footnote: { fontSize: 12, fontWeight: '400' as const },
+  largeTitle: { fontSize: 34, fontWeight: '700' as const, letterSpacing: 0.2 },
+  title2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: 0.1 },
+  headline: { fontSize: 17, fontWeight: '600' as const },
+  body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 23 },
+  subhead: { fontSize: 14, fontWeight: '400' as const, lineHeight: 19 },
+  footnote: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
   caption: { fontSize: 11, fontWeight: '500' as const, letterSpacing: 0.4 },
   hero: { fontSize: 48, fontWeight: '800' as const, letterSpacing: -0.5 },
-  statValue: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.2 },
+  statValue: { fontSize: 26, fontWeight: '700' as const, letterSpacing: -0.3 },
 } as const;
