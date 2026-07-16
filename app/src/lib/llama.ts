@@ -149,7 +149,21 @@ export function chat(
   return {
     promise,
     stop: () => {
-      ctx.stopCompletion().catch(() => {});
+      // Do not simplify this to `ctx.stopCompletion().catch(...)`. llama.rn
+      // types stopCompletion as Promise<void>, but unlike its siblings it is
+      // not declared `async`, so it hands back its JSI binding's return value
+      // unchanged — and that binding ends in `jsi::Value::undefined()`.
+      // Calling .catch() on undefined throws TypeError synchronously, inside
+      // the stop button's onPress, which closes a release build outright.
+      // Promise.resolve absorbs either shape if llama.rn ever adds `async`.
+      try {
+        Promise.resolve(ctx.stopCompletion()).catch(() => {});
+      } catch {
+        // The same binding throws "Context not found" synchronously once its
+        // context is gone, and this closure captured ctx at chat() time — a
+        // model switch mid-stream releases it out from under us. Nothing left
+        // to interrupt, so there is nothing to report either.
+      }
     },
   };
 }
