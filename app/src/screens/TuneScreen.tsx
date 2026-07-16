@@ -2,8 +2,8 @@
  * Tune tab — the product's core loop: sweep configs on this phone, see the
  * measured winner, apply it. Model management lives on the Models tab.
  */
-import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 import { radius, spacing, Theme, type } from '../theme';
 import { runForModel, useStore } from '../store';
 import {
@@ -11,13 +11,16 @@ import {
   Card,
   Chip,
   Divider,
+  ProgressBar,
   Row,
   SectionHeader,
   Segmented,
 } from '../components/ui';
-import { HBars, RingGauge } from '../components/charts';
+import { CoreMeters, HBars } from '../components/charts';
 import { CheckIcon, SparkleIcon } from '../components/icons';
 import { configLabel } from '../lib/tuner';
+import { BUSY, formatCpuRanges, useCoreLoad } from '../lib/coreload';
+import type { DeviceProfile } from '../types';
 
 function bytesGb(n: number): string {
   return `${(n / 1e9).toFixed(2)} GB`;
@@ -31,6 +34,91 @@ function replySeconds(decodeTps: number): number {
   return decodeTps > 0 ? Math.round((REPLY_TOKENS / decodeTps) * 10) / 10 : 0;
 }
 
+function LiveDot({ theme }: { theme: Theme }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.25, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return (
+    <Row style={{ gap: 5 }}>
+      <Animated.View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: theme.accent,
+          opacity,
+        }}
+      />
+      <Text style={[type.caption, { color: theme.inkMuted }]}>LIVE</Text>
+    </Row>
+  );
+}
+
+/**
+ * Owns the 2.5 Hz sampler so only the meters repaint at that rate, not the
+ * whole screen. Rendered only while a sweep runs — the cores are the subject
+ * of the Tune tab, and nowhere else.
+ */
+function CoreLoadPanel({ theme, profile }: { theme: Theme; profile: DeviceProfile }) {
+  const { load, supported } = useCoreLoad(profile.totalCores);
+  const busyCpus = load
+    .map((l, cpu) => ({ l, cpu }))
+    .filter(x => x.l >= BUSY)
+    .map(x => x.cpu);
+  const busyClusters = [
+    ...new Set(
+      busyCpus
+        .map(cpu => profile.clusters.find(c => c.cpuIds.includes(cpu))?.name)
+        .filter((n): n is string => n != null),
+    ),
+  ];
+
+  if (!supported) {
+    return (
+      <View>
+        <Text style={[type.caption, { color: theme.inkMuted, textTransform: 'uppercase' }]}>
+          Inference load · per core
+        </Text>
+        <Text style={[type.footnote, { color: theme.inkMuted, marginTop: spacing.s }]}>
+          This phone doesn't expose per-thread CPU stats to apps, so live core
+          load can't be shown here. Speed results are unaffected.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.m }}>
+        <Text style={[type.caption, { color: theme.inkMuted, textTransform: 'uppercase' }]}>
+          Inference load · per core
+        </Text>
+        <LiveDot theme={theme} />
+      </Row>
+      <CoreMeters
+        theme={theme}
+        clusters={profile.clusters}
+        bigCoreIds={profile.bigCoreIds}
+        load={load}
+      />
+      <Text style={[type.footnote, { color: theme.inkMuted, marginTop: spacing.m }]}>
+        Load from PocketTune's own inference threads, not system-wide CPU use.
+        {busyCpus.length > 0
+          ? ` Running on ${formatCpuRanges(busyCpus)} · ${busyClusters.join(' + ')}.`
+          : ''}
+      </Text>
+    </View>
+  );
+}
+
 export function TuneScreen({ theme }: { theme: Theme }) {
   const tune = useStore(s => s.tune);
   const selectedModelId = useStore(s => s.selectedModelId);
@@ -39,6 +127,7 @@ export function TuneScreen({ theme }: { theme: Theme }) {
   const applied = useStore(s => s.applied);
   const history = useStore(s => s.history);
   const battery = useStore(s => s.battery);
+  const profile = useStore(s => s.profile);
   const { startTune, applyBest, setTab } = useStore();
   const [mode, setMode] = useState<'quick' | 'full'>('quick');
 
@@ -137,14 +226,26 @@ export function TuneScreen({ theme }: { theme: Theme }) {
           )}
 
           {tune.running && (
-            <View style={{ alignItems: 'center', gap: spacing.l }}>
-              <RingGauge
-                theme={theme}
-                fraction={tune.progress}
-                label={`${Math.round(tune.progress * 100)}%`}
-                sublabel={tune.currentLabel ?? 'preparing'}
-              />
-              <Text style={[type.subhead, { color: theme.inkSecondary, textAlign: 'center' }]}>
+            <View style={{ gap: spacing.l }}>
+              <View>
+                <Row style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <Text style={[type.headline, { color: theme.inkPrimary }]}>
+                    {tune.currentLabel ?? 'Preparing'}
+                  </Text>
+                  {tune.totalConfigs > 0 && tune.currentIndex > 0 && (
+                    <Text style={[type.footnote, { color: theme.inkMuted }]}>
+                      config {tune.currentIndex} of {tune.totalConfigs}
+                    </Text>
+                  )}
+                </Row>
+                <View style={{ marginTop: 10 }}>
+                  <ProgressBar theme={theme} fraction={tune.progress} />
+                </View>
+              </View>
+
+              {profile && <CoreLoadPanel theme={theme} profile={profile} />}
+
+              <Text style={[type.footnote, { color: theme.inkMuted }]}>
                 Benchmarking each configuration with fixed prompt and generation
                 lengths — same methodology as the published harness numbers.
               </Text>

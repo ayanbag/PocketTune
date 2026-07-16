@@ -52,3 +52,4 @@ RELEASE.md
 tools/make_icons.py
 blog/
 devpost/
+tools/make_devpost_slides.py

@@ -42,6 +42,7 @@ import { chat, loadEngine, releaseEngine, StreamHandle } from './lib/llama';
 import {
   BASELINE_CONFIG,
   buildPlan,
+  configLabel,
   finishRun,
   loadState,
   runSweep,
@@ -56,6 +57,9 @@ interface TuneState {
   mode: 'quick' | 'full';
   progress: number;
   currentLabel: string | null;
+  /** 1-based position of the config being measured; 0 before the first */
+  currentIndex: number;
+  totalConfigs: number;
   livePoints: SweepPoint[];
   /** which model the live points belong to — they are not transferable */
   liveModelId: string | null;
@@ -189,6 +193,8 @@ export const useStore = create<AppState>((set, get) => ({
     mode: 'quick',
     progress: 0,
     currentLabel: null,
+    currentIndex: 0,
+    totalConfigs: 0,
     livePoints: [],
     liveModelId: null,
     error: null,
@@ -403,6 +409,8 @@ export const useStore = create<AppState>((set, get) => ({
         mode,
         progress: 0,
         currentLabel: null,
+        currentIndex: 0,
+        totalConfigs: 0,
         livePoints: [],
         liveModelId: selectedModelId,
         error: null,
@@ -415,9 +423,13 @@ export const useStore = create<AppState>((set, get) => ({
           tune: {
             ...s.tune,
             progress: p.index / p.total,
-            currentLabel:
-              p.index < p.total ? `${p.current.nThreads} threads` : null,
             livePoints: p.points,
+            totalConfigs: p.total,
+            // Only the pre-measurement yield names the config about to run;
+            // the post yield carries the one just finished.
+            ...(p.measured
+              ? null
+              : { currentLabel: configLabel(p.current), currentIndex: p.index + 1 }),
           },
         }));
       }

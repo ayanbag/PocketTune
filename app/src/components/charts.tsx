@@ -8,6 +8,8 @@ import React, { useState } from 'react';
 import { Text as RNText, View } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 import { Theme, type } from '../theme';
+import { BUSY } from '../lib/coreload';
+import type { CoreCluster } from '../types';
 
 // -------------------------------------------------------------------- helpers
 
@@ -374,56 +376,6 @@ export function Sparkline({
   );
 }
 
-// ------------------------------------------------------------------ RingGauge
-
-export function RingGauge({
-  theme,
-  fraction,
-  size = 120,
-  label,
-  sublabel,
-}: {
-  theme: Theme;
-  fraction: number;
-  size?: number;
-  label: string;
-  sublabel?: string;
-}) {
-  const stroke = 9;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const f = Math.max(0, Math.min(1, fraction));
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={theme.fill}
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={theme.accent}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${c * f} ${c}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <RNText style={[type.title2, { color: theme.inkPrimary }]}>{label}</RNText>
-      {sublabel ? (
-        <RNText style={[type.footnote, { color: theme.inkMuted }]}>{sublabel}</RNText>
-      ) : null}
-    </View>
-  );
-}
-
 // --------------------------------------------------------------- CoreTopology
 
 export interface TopologyCluster {
@@ -501,6 +453,143 @@ export function CoreTopology({
             });
             return nodes;
           })()}
+        </Svg>
+      )}
+    </View>
+  );
+}
+
+// ----------------------------------------------------------------- CoreMeters
+
+/**
+ * Live per-core load. Tile height is the core's max clock — the same encoding
+ * CoreTopology uses on the Device tab, so the silicon reads as the same
+ * silicon on both screens and no legend is needed: two tall tiles filling
+ * while the little ones stay dark *is* the big.LITTLE story. That frees the
+ * accent to mean one thing here, activity, rather than doubling as the
+ * big-cluster marker it is on Device.
+ */
+export function CoreMeters({
+  theme,
+  clusters,
+  bigCoreIds,
+  load,
+}: {
+  theme: Theme;
+  clusters: CoreCluster[];
+  bigCoreIds: number[];
+  load: number[];
+}) {
+  const [width, setWidth] = useState(0);
+  const cores = clusters
+    .flatMap(c => c.cpuIds.map(cpu => ({ cpu, maxMhz: c.maxMhz })))
+    .sort((a, b) => a.cpu - b.cpu);
+
+  const gap = 6;
+  const maxTileH = 64;
+  const topPad = 12; // headroom for the % above the tallest tile
+  const baseY = topPad + maxTileH;
+  const clusterY = baseY + 20;
+  const height = clusterY + 30;
+  const maxMhz = Math.max(...cores.map(c => c.maxMhz), 1);
+
+  if (!cores.length) return null;
+  const tileW = (width - gap * (cores.length - 1)) / cores.length;
+  const xAt = (i: number) => i * (tileW + gap);
+
+  return (
+    <View onLayout={e => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <Svg width={width} height={height}>
+          {cores.map((c, i) => {
+            const x = xAt(i);
+            const tileH = Math.max((c.maxMhz / maxMhz) * maxTileH, 24);
+            const top = baseY - tileH;
+            const l = Math.max(0, Math.min(1, load[c.cpu] ?? 0));
+            const fillH = tileH * l;
+            const busy = l >= BUSY;
+            return (
+              <React.Fragment key={c.cpu}>
+                <SvgText
+                  x={x + tileW / 2}
+                  y={top - 5}
+                  fill={busy ? theme.inkPrimary : theme.inkMuted}
+                  fontSize={9}
+                  fontWeight={busy ? '700' : '500'}
+                  textAnchor="middle">
+                  {`${Math.round(l * 100)}%`}
+                </SvgText>
+                <Rect
+                  x={x}
+                  y={top}
+                  width={tileW}
+                  height={tileH}
+                  rx={5}
+                  fill={theme.fillStrong}
+                />
+                {fillH >= 1 && (
+                  <Rect
+                    x={x}
+                    y={baseY - fillH}
+                    width={tileW}
+                    height={fillH}
+                    rx={Math.min(4, fillH / 2)}
+                    fill={theme.accent}
+                  />
+                )}
+                <SvgText
+                  x={x + tileW / 2}
+                  y={baseY + 12}
+                  fill={theme.inkMuted}
+                  fontSize={9}
+                  textAnchor="middle">
+                  {c.cpu}
+                </SvgText>
+              </React.Fragment>
+            );
+          })}
+
+          {[...clusters]
+            .sort((a, b) => Math.min(...a.cpuIds) - Math.min(...b.cpuIds))
+            .map(cl => {
+              const idxs = cl.cpuIds
+                .map(cpu => cores.findIndex(c => c.cpu === cpu))
+                .filter(i => i >= 0);
+              if (!idxs.length) return null;
+              const x0 = xAt(Math.min(...idxs));
+              const x1 = xAt(Math.max(...idxs)) + tileW;
+              const mid = (x0 + x1) / 2;
+              const big = cl.cpuIds.some(id => bigCoreIds.includes(id));
+              return (
+                <React.Fragment key={`cl-${cl.cpuIds[0]}`}>
+                  <Line
+                    x1={x0}
+                    y1={clusterY}
+                    x2={x1}
+                    y2={clusterY}
+                    stroke={theme.baseline}
+                    strokeWidth={1}
+                  />
+                  <SvgText
+                    x={mid}
+                    y={clusterY + 14}
+                    fill={theme.inkSecondary}
+                    fontSize={11}
+                    fontWeight={big ? '600' : '400'}
+                    textAnchor="middle">
+                    {`${cl.cpuIds.length}× ${cl.name.replace('Cortex-', '')}`}
+                  </SvgText>
+                  <SvgText
+                    x={mid}
+                    y={clusterY + 26}
+                    fill={theme.inkMuted}
+                    fontSize={10}
+                    textAnchor="middle">
+                    {`${(cl.maxMhz / 1000).toFixed(1)} GHz`}
+                  </SvgText>
+                </React.Fragment>
+              );
+            })}
         </Svg>
       )}
     </View>

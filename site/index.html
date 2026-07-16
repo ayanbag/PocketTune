@@ -82,6 +82,8 @@
   strong { font-weight: 600; }
   code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 2px 7px; border-radius: 6px; letter-spacing: 0; }
   .center { text-align: center; }
+  /* justified body copy — the block still centres via its own max-width/margin */
+  .justify { text-align: justify; }
   .center p, .center .lead { margin-left: auto; margin-right: auto; }
   .lead.narrow { max-width: 34ch; }
 
@@ -215,12 +217,20 @@
 
   /* device carousel — one slide per benchmarked phone */
   .carousel { display: flex; flex-direction: column; gap: 18px; }
-  .dev-track {
+  .dev-track, .shot-track {
     display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory;
     scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 2px;
   }
-  .dev-track::-webkit-scrollbar { display: none; }
+  .dev-track::-webkit-scrollbar, .shot-track::-webkit-scrollbar { display: none; }
   .dev-track > .panel { flex: 0 0 100%; scroll-snap-align: center; }
+  /* app gallery — each slide is a pre-composed image that carries its own
+     caption, so the markup adds none of its own */
+  .shot-track > figure { flex: 0 0 100%; scroll-snap-align: center; margin: 0; }
+  .shot-track img {
+    display: block; width: 100%; height: auto;
+    border-radius: var(--radius-md); border: 1px solid var(--hair);
+    background: var(--bg-alt);
+  }
   .carousel-bar { display: flex; align-items: center; gap: 14px; }
   .dots { display: flex; gap: 8px; margin-right: auto; }
   .dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--hair); transition: background .25s ease, transform .25s ease; }
@@ -281,6 +291,10 @@
   .term .g { color: #5fd49a; }
   .term .o { color: #ff9f6b; }
   .term .d { color: #86868b; }
+  /* every line is in the DOM from the start so the box holds its final height;
+     typing reveals them rather than growing the box under the reader */
+  .term .tline { min-height: 1.85em; }
+  .term .tline.pend { visibility: hidden; }
 
   .stack { display: flex; flex-direction: column; gap: 22px; }
   .stack.lg { gap: 34px; }
@@ -484,7 +498,7 @@
       <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
       <div class="stat fade"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls. Nothing leaves the phone.</div></div>
     </div>
-    <p class="small center fade stats-note">These are the speed ranges across <b id="stat-n"></b>, each one measured against its own unoptimized baseline. The spread <em>is</em> the finding: the same optimization is worth a different amount on different silicon, so no single number describes your phone. <a href="#evidence">See the per-device evidence ›</a></p>
+    <p class="small justify fade stats-note">These are the speed ranges across <b id="stat-n"></b>, each one measured against its own unoptimized baseline. The spread <em>is</em> the finding: the same optimization is worth a different amount on different silicon, so no single number describes your phone. <a href="#evidence">See the per-device evidence ›</a></p>
   </div>
 </section>
 
@@ -523,7 +537,7 @@
         <p>The winning thread count on the three phones — and no, it isn't &ldquo;all of them&rdquo;. The two big.LITTLE chips want 2; the tri-cluster Pixel wants 4, because it has exactly four fast cores. Ask it for 6 and prefill <em>falls</em> from 138 to 98 tok/s: the little cores become the bottleneck everyone waits for.</p>
       </div>
     </div>
-    <p class="body-2 center fade narrow-60">Every one contradicts what a reasonable developer would assume — and none of them generalizes across chips by default. That's the point: <strong>your phone's fastest configuration is an empirical question, so PocketTune answers it on your phone.</strong></p>
+    <p class="body-2 justify fade narrow-60">Every one contradicts what a reasonable developer would assume — and none of them generalizes across chips by default. That's the point: <strong>your phone's fastest configuration is an empirical question, so PocketTune answers it on your phone.</strong></p>
   </div>
 </section>
 
@@ -601,7 +615,7 @@
         </div>
       </div>
     </div>
-    <p class="body-2 center fade narrow-60">The whole stack exists to move one decision — <strong>which configuration to run</strong> — out of guesswork and into a measurement made on the phone in your hand.</p>
+    <p class="body-2 justify fade narrow-60">The whole stack exists to move one decision — <strong>which configuration to run</strong> — out of guesswork and into a measurement made on the phone in your hand.</p>
   </div>
 </section>
 
@@ -656,7 +670,7 @@
         <div class="opt-result"><div class="v">per config</div><div class="d">sampled live during each sweep point</div></div>
       </div>
     </div>
-    <p class="small center fade stats-note">Measured numbers come from the three phones that have actually been through the harness — MediaTek and Google silicon, one with <code>i8mm</code> and two without — and trace to raw JSON in <code>results/</code>. They disagree, and the disagreement is the finding: the same compiler flag buys 3.88×, 4.94× and 5.59×, and the <strong>biggest winner is a chip with no <code>i8mm</code></strong>. You cannot read the answer off a spec sheet. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
+    <p class="small justify fade stats-note">Measured numbers come from the three phones that have actually been through the harness — MediaTek and Google silicon, one with <code>i8mm</code> and two without — and trace to raw JSON in <code>results/</code>. They disagree, and the disagreement is the finding: the same compiler flag buys 3.88×, 4.94× and 5.59×, and the <strong>biggest winner is a chip with no <code>i8mm</code></strong>. You cannot read the answer off a spec sheet. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
   </div>
 </section>
 
@@ -669,12 +683,89 @@
     </div>
     <div class="term fade" aria-label="Terminal output of the benchmark harness">
       <div class="dots"><span></span><span></span><span></span></div>
-      <div id="termbody"><span class="d">$</span> python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf<br></div>
+      <div id="termbody"><div class="tline"><span class="d">$</span> python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf</div></div>
     </div>
   </div>
 </section>
 
-<section class="band">
+<section id="gallery" class="band">
+  <div class="col stack lg">
+    <div class="center stack fade">
+      <div class="kicker">The app</div>
+      <h2>Four tabs.<br>One tuned phone.</h2>
+      <p class="lead">Everything on this page ships as one Android app. It reads the chip it was installed on, benchmarks the configurations that chip can actually run, applies the winner, and leaves you with a private assistant running exactly that setup.</p>
+    </div>
+    <p class="body-2 justify fade narrow-60">The harness proves the gains on a bench; the app is where they land. <strong>The whole loop — detect, sweep, recommend, apply — happens on the phone, with no cloud and no spec-sheet guessing.</strong></p>
+    <div class="carousel fade">
+      <div class="shot-track" id="shot-track">
+        <figure data-label="Knows your exact silicon">
+          <img src="public/screenshots/01-device-detect.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Device tab — “Knows your exact silicon”. Reads the Arm CPU features and the big.LITTLE core map straight from the phone: dotprod, i8mm, SVE2, and which cores are the fast ones.">
+        </figure>
+        <figure data-label="The right kernel, automatically">
+          <img src="public/screenshots/02-kernel-dispatch.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Device tab — “The right kernel, automatically”. Runtime dispatch loads the inference binary built for this exact CPU, and every config gets a tokens-per-joule score.">
+        </figure>
+        <figure data-label="What actually fits">
+          <img src="public/screenshots/03-what-fits.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Device tab — “What actually fits”. Model sizes weighed against real RAM, leaving headroom for the KV cache, the app and Android itself.">
+        </figure>
+        <figure data-label="A model matched to your phone">
+          <img src="public/screenshots/04-models.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Models tab — “A model matched to your phone”. Device-aware recommendations; Q4_0 repacks into this chip's fast kernels at load time, or bring your own GGUF.">
+        </figure>
+        <figure data-label="One tap to tune">
+          <img src="public/screenshots/05-tune-ready.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “One tap to tune”. Sweeps thread counts, flash attention and KV-cache layout on the device itself, with no cloud and no guessing from a spec sheet.">
+        </figure>
+        <figure data-label="One tap to tune">
+          <img src="public/screenshots/05.1-core-load.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “One tap to tune”. Sweeps thread counts, flash attention and KV-cache layout on the device itself, with no cloud and no guessing from a spec sheet.">
+        </figure>
+        <figure data-label="Every configuration, measured">
+          <img src="public/screenshots/06-sweep-chart.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “Every configuration, measured”. Decode speed for each config, benchmarked live on the phone and charted as each result lands.">
+        </figure>
+        <figure data-label="Faster replies, proven">
+          <img src="public/screenshots/07-recommendation.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “Faster replies, proven”. The winning config with decode, prefill, tokens-per-joule and power draw: 1.16× faster than the llama.cpp default on this phone.">
+        </figure>
+        <figure data-label="Baseline vs tuned">
+          <img src="public/screenshots/08-baseline-vs-tuned.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “Baseline vs tuned”. The speedup where you feel it: decode rate, time to first token, and the wait for a full reply.">
+        </figure>
+        <figure data-label="Fast isn't always efficient">
+          <img src="public/screenshots/09-energy.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “Fast isn't always efficient”. Tokens-per-joule from the battery rail; the config that wins on speed doesn't always win on battery, so the app measures both.">
+        </figure>
+        <figure data-label="Apply in one tap">
+          <img src="public/screenshots/10-apply.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Tune tab — “Apply in one tap”. The best config is saved and carried straight into chat; the whole loop of detect, sweep, recommend and apply runs on the phone.">
+        </figure>
+        <figure data-label="Private, and fully offline">
+          <img src="public/screenshots/11-chat-offline.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Chat tab — “Private, and fully offline”. The model runs on your phone and works in airplane mode; nothing you type ever leaves the device.">
+        </figure>
+        <figure data-label="Real answers, on-device">
+          <img src="public/screenshots/12-chat-answer.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Chat tab — “Real answers, on-device”. Full markdown replies from a local LLM running the configuration tuned for this exact silicon.">
+        </figure>
+        <figure data-label="Measured speed on every reply">
+          <img src="public/screenshots/13-chat-tokps.png" width="2160" height="1440" loading="lazy" decoding="async"
+               alt="Chat tab — “Measured speed on every reply”. Real tokens-per-second under each message — the same metric the tuner optimizes, verified in everyday use.">
+        </figure>
+      </div>
+      <div class="carousel-bar">
+        <div class="dots" id="shot-dots"></div>
+        <button class="arrow" id="shot-prev" type="button" aria-label="Previous screen">&lsaquo;</button>
+        <button class="arrow" id="shot-next" type="button" aria-label="Next screen">&rsaquo;</button>
+      </div>
+    </div>
+    <p class="small justify fade stats-note">Four tabs, one loop. <b>Device</b> reads the Arm features, the core map and what will actually fit in memory. <b>Models</b> recommends the ones matched to this chip — or takes your own GGUF. <b>Tune</b> sweeps thread counts, flash attention and KV-cache layout on the phone itself, scores each result for speed and tokens per joule, and applies the winner. <b>Chat</b> runs the tuned model offline, printing measured tokens per second under every reply. React Native and TypeScript over llama.cpp via llama.rn; the screens above are a Nothing Phone (2a). <a href="#how">See the loop step by step ›</a></p>
+  </div>
+</section>
+
+<section class="band grey">
   <div class="col center stack fade">
     <h2>Stop guessing.<br>Measure.</h2>
     <p class="lead narrow">Every component — quantization, i8mm, compiler flags, the harness — explained from zero.</p>
@@ -867,6 +958,57 @@
       '<p class="body-2 dev-meta">' + d.note + "</p></div>";
   }
 
+  /* dots + arrows + swipe-sync for a scroll-snap track. Shared by the device
+     panels and the app gallery; `id` prefixes the track/dots/prev/next ids, and
+     `labels` names each slide for the dot's screen-reader label. */
+  function initCarousel(id, labels) {
+    var track = document.getElementById(id + "-track"),
+        dotbox = document.getElementById(id + "-dots"),
+        prev = document.getElementById(id + "-prev"),
+        next = document.getElementById(id + "-next"),
+        at = 0;
+    if (!track || !dotbox || !prev || !next) return;
+
+    labels.forEach(function (label, i) {
+      var b = document.createElement("button");
+      b.className = "dot";
+      b.type = "button";
+      b.setAttribute("aria-label", label);
+      b.addEventListener("click", function () { go(i); });
+      dotbox.appendChild(b);
+    });
+
+    function go(i) {
+      at = Math.max(0, Math.min(labels.length - 1, i));
+      track.scrollTo({ left: track.children[at].offsetLeft - track.offsetLeft, behavior: reduced ? "auto" : "smooth" });
+      sync();
+    }
+    function sync() {
+      Array.prototype.forEach.call(dotbox.children, function (d, i) {
+        d.setAttribute("aria-current", i === at ? "true" : "false");
+      });
+      prev.disabled = at === 0;
+      next.disabled = at === labels.length - 1;
+    }
+    prev.addEventListener("click", function () { go(at - 1); });
+    next.addEventListener("click", function () { go(at + 1); });
+    /* keep dots honest when the user swipes the track directly */
+    track.addEventListener("scroll", function () {
+      var w = track.clientWidth || 1;
+      var i = Math.round(track.scrollLeft / w);
+      if (i !== at) { at = i; sync(); }
+    });
+    sync();
+  }
+
+  /* app gallery — slides are authored in the markup, so the labels come from it */
+  var shotTrack = document.getElementById("shot-track");
+  if (shotTrack) {
+    initCarousel("shot", Array.prototype.map.call(shotTrack.children, function (f) {
+      return f.dataset.label || "";
+    }));
+  }
+
   /* carousel: one slide per benchmarked phone — controls appear only once there are two */
   if (host) {
     var many = MEASURED.length > 1;
@@ -883,42 +1025,7 @@
       "</b>.</p>";
 
     if (many) {
-      var track = document.getElementById("dev-track"),
-          dotbox = document.getElementById("dev-dots"),
-          prev = document.getElementById("dev-prev"),
-          next = document.getElementById("dev-next"),
-          at = 0;
-
-      MEASURED.forEach(function (d, i) {
-        var b = document.createElement("button");
-        b.className = "dot";
-        b.type = "button";
-        b.setAttribute("aria-label", d.soc);
-        b.addEventListener("click", function () { go(i); });
-        dotbox.appendChild(b);
-      });
-
-      function go(i) {
-        at = Math.max(0, Math.min(MEASURED.length - 1, i));
-        track.scrollTo({ left: track.children[at].offsetLeft - track.offsetLeft, behavior: reduced ? "auto" : "smooth" });
-        sync();
-      }
-      function sync() {
-        Array.prototype.forEach.call(dotbox.children, function (d, i) {
-          d.setAttribute("aria-current", i === at ? "true" : "false");
-        });
-        prev.disabled = at === 0;
-        next.disabled = at === MEASURED.length - 1;
-      }
-      prev.addEventListener("click", function () { go(at - 1); });
-      next.addEventListener("click", function () { go(at + 1); });
-      /* keep dots honest when the user swipes the track directly */
-      track.addEventListener("scroll", function () {
-        var w = track.clientWidth || 1;
-        var i = Math.round(track.scrollLeft / w);
-        if (i !== at) { at = i; sync(); }
-      });
-      sync();
+      initCarousel("dev", MEASURED.map(function (d) { return d.soc; }));
     }
   }
 
@@ -1086,15 +1193,20 @@
   })();
   var body = document.getElementById("termbody");
   if (body) {
-    if (reduced) {
-      lines.forEach(function (l) { body.innerHTML += l + "<br>"; });
-    } else {
+    var els = lines.map(function (l) {
+      var el = document.createElement("div");
+      el.className = reduced ? "tline" : "tline pend";
+      el.innerHTML = l;
+      body.appendChild(el);
+      return el;
+    });
+    if (!reduced) {
       var li = 0, started = false;
       function typeLines() {
         if (started) return; started = true;
         var iv = setInterval(function () {
-          if (li >= lines.length) { clearInterval(iv); return; }
-          body.innerHTML += lines[li] + "<br>";
+          if (li >= els.length) { clearInterval(iv); return; }
+          els[li].className = "tline";
           li++;
         }, 420);
       }

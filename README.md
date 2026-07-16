@@ -10,7 +10,7 @@
 
 **Finds and applies the fastest local-LLM configuration for the phone it runs on.**
 
-PocketTune is an Android app that detects your phone's Arm CPU features, benchmarks a sweep of
+*PocketTune* is an Android app that detects your phone's Arm CPU features, benchmarks a sweep of
 LLM inference configurations **on the device itself**, then recommends and applies the fastest
 one — and gives you a fully offline chat app running on it.
 
@@ -328,6 +328,7 @@ results/   Raw benchmark JSON — every published claim links here
 docs/      Benchmark schema · how to add a new phone
 site/      Project site
 ```
+
 
 ## License
 

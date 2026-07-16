@@ -74,6 +74,8 @@ export interface SweepProgress {
   total: number;
   current: TuneConfig;
   points: SweepPoint[];
+  /** true on the yield *after* `current` was measured, false on the one before */
+  measured: boolean;
 }
 
 /**
@@ -92,7 +94,7 @@ export async function* runSweep(
 
   for (let i = 0; i < plan.length; i++) {
     const config = plan[i];
-    yield { index: i, total: plan.length, current: config, points: [...points] };
+    yield { index: i, total: plan.length, current: config, points: [...points], measured: false };
 
     await loadEngine(modelPath, config);
     const sampler = new PowerSampler();
@@ -114,7 +116,7 @@ export async function* runSweep(
       tokensPerJoule,
       isBaseline: sameConfig(config, BASELINE_CONFIG),
     });
-    yield { index: i + 1, total: plan.length, current: config, points: [...points] };
+    yield { index: i + 1, total: plan.length, current: config, points: [...points], measured: true };
   }
 }
 
