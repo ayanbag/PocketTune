@@ -470,6 +470,21 @@ export function CoreTopology({
  * while the little ones stay dark *is* the big.LITTLE story. That frees the
  * accent to mean one thing here, activity, rather than doubling as the
  * big-cluster marker it is on Device.
+ *
+ * Hue is a load ramp — green idling, orange working, red saturated — so a
+ * core's colour and its bar height say the same thing twice. Note the ramp's
+ * bands (0.25/0.85) straddle BUSY, the threshold the panel's "Running on cpu…"
+ * prose uses, so the two can disagree: a core at 0.3 carrying incidental load
+ * and a core at 0.6 running inference are both orange, and neither hue edge
+ * marks the in-use line. In-use is carried instead by the label ink and weight
+ * above and below each tile, which do read BUSY.
+ *
+ * Worth knowing before trusting either: the load is not bimodal. A migrating
+ * thread's whole delta is charged to wherever it landed (see coreload.ts), so
+ * a 4-thread config smears across all eight cores rather than pinning four —
+ * 46/47/45/91/67/9/45/34 (sum 384% ≈ 3.8 cores) was a real sample. Cores doing
+ * real work routinely sit mid-ramp, and the honest answer to "which cores is
+ * this config on" is usually "all of them, partially".
  */
 export function CoreMeters({
   theme,
@@ -572,8 +587,9 @@ export function CoreMeters({
                 <SvgText
                   x={x + tileW / 2}
                   y={baseY + 12}
-                  fill={theme.inkMuted}
+                  fill={busy ? theme.inkPrimary : theme.inkMuted}
                   fontSize={9}
+                  fontWeight={busy ? '700' : '400'}
                   textAnchor="middle">
                   {c.cpu}
                 </SvgText>

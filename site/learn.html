@@ -349,7 +349,7 @@
     <div class="arch fade">
       <div class="arch-row">
         <div class="arch-label">Screens · TS</div>
-        <div class="arch-box"><span class="t">Five screens — Device · Models · Tune · Chat · Lab</span><div class="d">React Native, every line TypeScript — by design, no C++ or Kotlin is written in this project. Device reads the silicon, Models manages GGUF downloads, Tune sweeps and applies, Chat runs the winner offline, Lab holds the evidence.</div></div>
+        <div class="arch-box"><span class="t">Four screens — Device · Models · Tune · Chat</span><div class="d">React Native, every line TypeScript — by design, no C++ or Kotlin is written in this project. Device reads the silicon, Models manages GGUF downloads, Tune sweeps and applies, Chat runs the winner offline.</div></div>
       </div>
       <div class="arch-conn"><span></span></div>
       <div class="arch-row">
@@ -387,7 +387,7 @@
     <p class="body-2 fade">The app ships alone. Everything else in the repository exists to produce and audit the evidence:</p>
     <div class="tree fade">
 <span class="dir">armcreate/</span><br>
-├── <span class="dir">app/</span>              <span class="cm">← the React Native app — five screens + the tuning core (src/lib/)</span><br>
+├── <span class="dir">app/</span>              <span class="cm">← the React Native app — four screens + the tuning core (src/lib/)</span><br>
 ├── <span class="dir">harness/</span>          <span class="cm">← bench.py — pushes builds + model to the phone, times them, saves JSON</span><br>
 ├── <span class="dir">tools/</span>            <span class="cm">← Python utilities — distill results/ into the app's bundled Lab evidence</span><br>
 ├── <span class="dir">models/</span>           <span class="cm">← the .gguf compressed models (Q4_0 · Q4_K_M · Q8_0)</span><br>
