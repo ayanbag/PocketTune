@@ -254,13 +254,14 @@ The numbers in `results/` come from `llama-bench` builds driven over adb — no 
 anyone can verify them:
 
 ```bash
-# 1. Cross-compile llama.cpp for Android (Windows/macOS/Linux; needs Android NDK + CMake)
-#    Variants and exact flags are documented in docs/ — the key ones:
-#      generic:     no arch flags (what a non-optimized app ships)
-#      arch:        -march=armv8.2-a+dotprod+i8mm
-#      kleidiai:    arch flags + -DGGML_CPU_KLEIDIAI=ON
-#      dp-arch:     -march=armv8.2-a+dotprod       (for chips WITHOUT i8mm)
-#      dp-kleidiai: dp-arch flags + KleidiAI
+# 1. Cross-compile llama.cpp for Android (Windows/macOS/Linux; needs Android NDK + CMake).
+#    Full copy-pasteable commands per variant: docs/building-llama-cpp.md
+#      generic:       no arch flags (what a non-optimized app ships)
+#      v82:           -march=armv8.2-a                    (pre-dotprod chips)
+#      dp-arch-clean: -march=armv8.2a+dotprod             (chips WITHOUT i8mm)
+#      dp-kleidiai:   dp-arch-clean flags + -DGGML_CPU_KLEIDIAI=ON
+#      arch:          -march=armv8.2a+i8mm+dotprod        (i8mm chips only)
+#      kleidiai:      arch flags + -DGGML_CPU_KLEIDIAI=ON
 
 # 2. Run the sweep (pushes binaries + model, benchmarks, writes results/*.json)
 #    Pick the ladder that matches your chip — check `adb shell grep -m1 Features /proc/cpuinfo`.
@@ -268,9 +269,17 @@ anyone can verify them:
 # ...on a phone WITH i8mm (e.g. Nothing 2a):
 python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic arch kleidiai
 
-# ...on a dotprod-only phone (e.g. Galaxy A34) — the i8mm builds would SIGILL here:
-python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic dp-arch dp-kleidiai
+# ...on a dotprod-only phone (e.g. Pixel 7a, Galaxy A34) — the i8mm builds would SIGILL here:
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic dp-arch-clean dp-kleidiai
+
+# ...on a pre-dotprod phone (e.g. Realme 5 Pro) — every +dotprod build SIGILLs; expect ~1.00×:
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf --variants generic v82
 ```
+
+> Use `dp-arch-clean`, **not** `dp-arch`. The latter is the build the [`$kai` bug](#kleidiai-zero-on-one-chip-negative-on-another--and-an-honest-correction)
+> contaminated — it has KleidiAI compiled in despite its name, and is kept only so the retracted
+> numbers in `results/` stay traceable. `docs/building-llama-cpp.md` has the one-line check that
+> catches this class of mistake.
 
 Methodology: 5 repetitions per point, fixed prompt (128) and generation (64) lengths, 90-second
 cooldowns between variants, airplane mode, screen forced awake, battery level and temperature
@@ -369,7 +378,7 @@ tools/     Python utilities (uv): evidence distillation for the app
 models/    GGUF models used by the harness (not committed)
 vendor/    llama.cpp source + cross-compiled build variants (not committed)
 results/   Raw benchmark JSON — every published claim links here
-docs/      Benchmark schema · how to add a new phone
+docs/      Building the llama.cpp variants · benchmark schema · how to add a new phone
 site/      Project site
 ```
 
