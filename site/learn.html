@@ -265,7 +265,7 @@
       </div>
       <div class="g-card fade">
         <span class="k">The -march flag</span>
-        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=…</code> is permission to emit them. Across the three phones benchmarked it was worth <b>3.88×</b>, <b>4.94×</b> and <b>5.59×</b> on prefill — same flag, three different ceilings. And the ranking is <i>not</i> the feature ranking: the biggest gain belongs to a chip with <b>no i8mm at all</b>. The right flags are the ones matching <i>that</i> phone — which is why they're chosen after detection, and why the size of the win has to be measured rather than predicted.</p>
+        <p>Compilers default to <b>safe, generic code</b> that runs on any arm64 chip — and uses none of those fast instructions. <code>-march=…</code> is permission to emit them. Across the four phones benchmarked it was worth <b>1.00×</b>, <b>3.88×</b>, <b>4.94×</b> and <b>5.27×</b> on prefill — same lever, four different ceilings, including a chip where it buys nothing because the instructions aren't there. And the ranking is <i>not</i> the feature ranking: the biggest gain belongs to a chip with <b>no i8mm at all</b>. The right flags are the ones matching <i>that</i> phone — which is why they're chosen after detection, and why the size of the win has to be measured rather than predicted.</p>
       </div>
       <div class="g-card fade">
         <span class="k">big.LITTLE cores</span>
@@ -273,7 +273,7 @@
       </div>
       <div class="g-card fade">
         <span class="k">KleidiAI</span>
-        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. On <b>all three</b> phones measured, for Q4_0: <b>no measurable gain</b> once the compiler flags are right, because plain compiled code already saturates that hardware — true on the i8mm chip and on both dotprod-only ones. On SME2 silicon or a different quant the verdict could invert — so it stays a lever under test, per device.</p>
+        <p>Arm's official library of hand-tuned matmul routines for dotprod, i8mm and SME2. The obvious assumption — turn it on, get speed — is exactly what we tested. On the i8mm chip, for Q4_0: <b>no measurable gain</b> once the compiler flags are right, because plain compiled code already saturates that hardware. On the Pixel 7a, isolating it against a KleidiAI-free control went further: KleidiAI <b>costs ~3.6%</b> there — llama.cpp's own repack path is simply faster. On SME2 silicon or a different quant the verdict could invert — so it stays a lever under test, per device.</p>
       </div>
       <div class="g-card fade">
         <span class="k">llama.cpp and llama-bench</span>
@@ -416,7 +416,7 @@
           <tr><td class="name">adb</td><td>USB command line to the phone</td><td class="why">Push binaries, run benchmarks, read CPU features and battery state — scriptable and reproducible, with no app install needed.</td></tr>
           <tr><td class="name">harness/bench.py</td><td>The measurement scientist</td><td class="why">Enforces rigour automatically: five repetitions, cooldowns between variants, battery and thermal logging, raw JSON out. Anyone reruns every number with one command.</td></tr>
           <tr><td class="name">GGUF models</td><td>Pre-quantized Llama 3.2 1B</td><td class="why">Small enough to iterate quickly, permissively licensed, and available in the exact quant formats the sweep compares.</td></tr>
-          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict on all three phones measured: neutral for Q4_0 — kept in the sweep because it may matter on other quants and on SME2 chips.</td></tr>
+          <tr><td class="name">KleidiAI</td><td>Arm's optimized kernel library</td><td class="why">Included as a <em>lever under test</em>, never an assumption. Verdict so far: neutral for Q4_0 on the i8mm chip, <em>−3.6%</em> on the Pixel 7a — kept in the sweep because it may matter on other quants and on SME2 chips.</td></tr>
         </tbody>
       </table>
     </div>
@@ -485,7 +485,7 @@
     <div class="center stack fade">
       <div class="kicker">Chapter seven</div>
       <h2>What the silicon<br>actually said.</h2>
-      <p class="lead">Results are per device — so here are all three. One has <code>i8mm</code>; two do not. We said a chip without i8mm would tell a different story and would get its own table only once it was actually measured. Two now have, and the story they tell is not the one we expected.</p>
+      <p class="lead">Results are per device — so here are all four. One has <code>i8mm</code>; two have dotprod only; one has neither. We said a chip without i8mm would tell a different story and would get its own table only once it was actually measured. Three now have, and none of them tells the story we expected — least of all the one where the lever does nothing.</p>
     </div>
 
     <!-- one slide per benchmarked phone. No .fade on a slide: an off-screen slide never
@@ -502,8 +502,6 @@
                 <tr><td class="mono">generic</td><td>20.51</td><td>12.73</td><td class="why">The default everyone ships. Slow.</td></tr>
                 <tr><td class="mono">arch</td><td><strong>101.43</strong></td><td><strong>17.00</strong></td><td class="why"><strong>4.94× / 1.34×</strong> — the compiler flag is the whole gain.</td></tr>
                 <tr><td class="mono">kleidiai</td><td>100.09</td><td>15.61</td><td class="why">Within noise of <code>arch</code>. No added value here.</td></tr>
-                <tr><td class="mono">arch-norepack</td><td>103.90</td><td>17.33</td><td class="why">Even repack adds nothing once i8mm is on.</td></tr>
-                <tr><td class="mono">kleidiai-norepack</td><td>98.09</td><td>16.76</td><td class="why">KleidiAI ≈ plain i8mm code. Tested four ways.</td></tr>
               </tbody>
             </table>
           </div>
@@ -516,8 +514,7 @@
               <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
               <tbody>
                 <tr><td class="mono">generic</td><td>18.50</td><td>12.00</td><td class="why">Same slow default. Roughly where phone one started.</td></tr>
-                <tr><td class="mono">dp-arch</td><td><strong>71.73</strong></td><td><strong>17.34</strong></td><td class="why"><strong>3.88× / 1.44×</strong> — same lever, <em>lowest ceiling of the three</em>. Not because it lacks i8mm (so does the Pixel, which wins) — its A78 cores are simply narrower.</td></tr>
-                <tr><td class="mono">dp-kleidiai</td><td>71.75</td><td>17.76</td><td class="why">Flat again (+0.03% prefill). The negative result is now two-for-two.</td></tr>
+                <tr><td class="mono">dp-arch</td><td><strong>71.73</strong></td><td><strong>17.34</strong></td><td class="why"><strong>3.88× / 1.44×</strong> — same lever, <em>the lowest ceiling among the phones it works on</em>. Not because it lacks i8mm (so does the Pixel, which wins) — its A78 cores are simply narrower.</td></tr>
               </tbody>
             </table>
           </div>
@@ -529,9 +526,23 @@
             <table>
               <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
               <tbody>
-                <tr><td class="mono">generic</td><td>24.66</td><td>12.69</td><td class="why">The same slow default, a third time.</td></tr>
-                <tr><td class="mono">dp-arch</td><td><strong>137.95</strong></td><td><strong>25.87</strong></td><td class="why"><strong>5.59× / 2.04×</strong> — <em>the biggest gain of the three</em>, on the chip with the fewest features. The Cortex-X1 cores devour plain dotprod code.</td></tr>
-                <tr><td class="mono">dp-kleidiai</td><td>137.95</td><td>25.52</td><td class="why">Flat a third time. Three phones, three ≈0%.</td></tr>
+                <tr><td class="mono">generic</td><td>27.22</td><td>12.71</td><td class="why">The same slow default, a third time.</td></tr>
+                <tr><td class="mono">dp-arch-clean</td><td><strong>143.49</strong></td><td><strong>26.83</strong></td><td class="why"><strong>5.27× / 2.11×</strong> — <em>the biggest gain measured</em>, on a chip missing the headline feature. The Cortex-X1 cores devour plain dotprod code.</td></tr>
+                <tr><td class="mono">dp-kleidiai</td><td>138.39</td><td>25.95</td><td class="why"><strong>−3.6%</strong> — not flat here: KleidiAI actively costs. llama.cpp's own repack path beats the kernels on Tensor G2 for Q4_0.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lad-slide">
+          <h3 class="lad-title">Realme 5 Pro · Snapdragon 710<span class="tag off">no dotprod — the floor case</span></h3>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Build</th><th>Prefill</th><th>Decode</th><th>Verdict</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">generic</td><td><strong>14.94</strong></td><td><strong>8.80</strong></td><td class="why">The default build — and on this chip, also the fastest. All it can do is use 6 threads.</td></tr>
+                <tr><td class="mono">v82 (armv8.2-a)</td><td>14.84</td><td>8.76</td><td class="why"><strong>1.00× / 1.00×</strong> — the flag compiled for everything this chip has, and it bought nothing. There is no dotprod to unlock.</td></tr>
+                <tr><td class="mono">dp-arch</td><td colspan="2">SIGILL</td><td class="why">Every <code>+dotprod</code> build dies with an illegal instruction. Below dotprod, the ISA is a hard floor.</td></tr>
               </tbody>
             </table>
           </div>
@@ -545,18 +556,18 @@
       </div>
     </div>
 
-    <p class="body-2 fade">Flip between the three and the thesis is right there. The <em>same</em> compiler flag is worth <strong>3.88×</strong>, <strong>4.94×</strong> and <strong>5.59×</strong>. We expected that spread to be explained by <code>i8mm</code> — the matrix-multiply instructions the 2a has and the others lack. <strong>It isn't.</strong> The Pixel 7a has no i8mm whatsoever and still posts the <em>largest</em> gain of the three, comfortably ahead of the chip that has it. Its Cortex-X1 cores are simply wider and hungrier, and they extract more from ordinary dot-product code than the 2a's A715s extract from the fancy instructions. The feature checklist told us the wrong story; only the measurement told us the right one.</p>
+    <p class="body-2 fade">Flip between the four and the thesis is right there. The <em>same</em> compiler-flag lever is worth <strong>1.00×</strong>, <strong>3.88×</strong>, <strong>4.94×</strong> and <strong>5.27×</strong>. We expected that spread to be explained by <code>i8mm</code> — the matrix-multiply instructions the 2a has and the others lack. <strong>It isn't.</strong> The Pixel 7a has no i8mm whatsoever and still posts the <em>largest</em> gain, comfortably ahead of the chip that has it — its Cortex-X1 cores extract more from ordinary dot-product code than the 2a's A715s extract from the fancy instructions. And at the other end sits the Snapdragon 710, where the lever does <em>nothing at all</em>: with no dotprod in the silicon, the optimized builds either crash or tie the generic one. The feature checklist told us the wrong story; only the measurement told us the right one.</p>
 
     <p class="body-2 fade">This is the most uncomfortable — and most useful — result in the project. A reasonable engineer reads the spec sheets, sees <code>i8mm</code> on one phone and not the others, and confidently predicts the ranking. That prediction is wrong. Silicon does not reduce to a feature list, and a config chosen from one is a config chosen by guesswork.</p>
 
-    <p class="body-2 fade">The thread count says the same thing even louder, because <em>every phone wants a different answer</em>. On the A34, the generic build decodes fastest at <strong>6 threads</strong>, yet once the arch flags are on 6 threads becomes the <em>worst</em> choice and <strong>2 threads</strong> — just the two big A78 cores — wins. On the Pixel the winner is <strong>4 threads</strong>: it is the only tri-cluster phone here, with exactly four fast cores (2× Cortex-X1 + 2× Cortex-A78), so the fifth and sixth threads spill onto little A55s and prefill collapses from <strong>138.0</strong> to <strong>97.5</strong> tok/s — a 29% penalty for the crime of using more of your CPU. Two phones want 2 threads, one wants 4, and one of them changes its mind depending on the build. No static default survives that.</p>
+    <p class="body-2 fade">The thread count says the same thing even louder, because <em>every phone wants a different answer</em>. On the A34, the generic build decodes fastest at <strong>6 threads</strong>, yet once the arch flags are on 6 threads becomes the <em>worst</em> choice and <strong>2 threads</strong> — just the two big A78 cores — wins. On the Pixel the winner is <strong>4 threads</strong>: it is the only tri-cluster phone here, with exactly four fast cores (2× Cortex-X1 + 2× Cortex-A78), so the fifth and sixth threads spill onto little A55s and prefill collapses from <strong>143.5</strong> to <strong>101.8</strong> tok/s — a 29% penalty for the crime of using more of your CPU. And the Realme 5 Pro inverts the rule completely: its two A75-class big cores are weak enough that <strong>6 threads</strong> — little cores and all — is genuinely fastest. Two phones want 2 threads, one wants 4, one wants all 6, and one changes its mind depending on the build. No static default survives that.</p>
 
-    <p class="body-2 fade">There is one more asymmetry sitting in every ladder above, easy to miss. The <em>same</em> arch flag that multiplies <strong>prefill</strong> by up to 5.59× barely nudges <strong>decode</strong> — 1.34× on the 2a, 2.04× at best. That is not a bug in the optimization; it is the two phases hitting two different walls.</p>
+    <p class="body-2 fade">There is one more asymmetry sitting in every ladder above, easy to miss. The <em>same</em> arch flag that multiplies <strong>prefill</strong> by up to 5.27× barely nudges <strong>decode</strong> — 1.34× on the 2a, 2.11× at best. That is not a bug in the optimization; it is the two phases hitting two different walls.</p>
 
     <div class="glossary fade">
       <div class="g-card">
         <span class="k">Prefill hits the compute wall</span>
-        <p>Reading your whole prompt at once, the model reuses each weight across <b>every</b> prompt token in one batched pass — so the cores are kept busy doing arithmetic. The ceiling is <b>how many multiply-adds per second</b> the CPU can retire, which is exactly what the <code>dotprod</code>/<code>i8mm</code> instructions and arch flags raise. Lift that ceiling and prefill leaps — hence <strong>up to 5.59×</strong>.</p>
+        <p>Reading your whole prompt at once, the model reuses each weight across <b>every</b> prompt token in one batched pass — so the cores are kept busy doing arithmetic. The ceiling is <b>how many multiply-adds per second</b> the CPU can retire, which is exactly what the <code>dotprod</code>/<code>i8mm</code> instructions and arch flags raise. Lift that ceiling and prefill leaps — hence <strong>up to 5.27×</strong>.</p>
       </div>
       <div class="g-card">
         <span class="k">Decode hits the memory wall</span>
@@ -564,11 +575,11 @@
       </div>
     </div>
 
-    <p class="body-2 fade">Same optimization, two ceilings. It is why a single row can read <strong>5.59× / 2.04×</strong> — and why the tuner weighs decode more heavily when it scores a config: decode is the wall you actually feel while the answer types itself out.</p>
+    <p class="body-2 fade">Same optimization, two ceilings. It is why a single row can read <strong>5.27× / 2.11×</strong> — and why the tuner weighs decode more heavily when it scores a config: decode is the wall you actually feel while the answer types itself out.</p>
 
     <div class="callout fade">
       <span class="t">Honest caveats</span>
-      <p>Three phones across <strong>two vendors</strong> (MediaTek and Google) now, which retires the earlier "these are all MediaTek chips" caveat — but it is still <strong>three chips, one model, one quant family</strong>. Two honest wrinkles. <strong>One:</strong> the Pixel's <code>generic</code> baseline is genuinely noisy — it swung ±9% across runs, and an early run on a cold, freshly-idle phone came in ~25% high before settling. Its arch builds, by contrast, repeat to within <strong>0.3%</strong>. We publish the conservative run, so the 5.59× is if anything an <em>under</em>-statement; the raw JSON for every run is in <code>results/</code>, including the ones that disagree with each other. <strong>Two:</strong> "KleidiAI adds nothing" means <em>on this hardware, for this format</em>; on SME2 silicon or with other quants the answer may flip, and we would publish that too. Nothing here is presented as a law of Arm phones. Which is precisely why the product ships a measurement loop instead of a lookup table.</p>
+      <p>Four phones across <strong>three vendors</strong> (MediaTek, Google, Qualcomm) now, which retires the earlier "these are all MediaTek chips" caveat — but it is still <strong>four chips, one model, one quant family</strong>. Three honest wrinkles. <strong>One:</strong> the Pixel's <code>generic</code> baseline is genuinely noisy — it swung ±9% across runs — while its arch builds repeat to within <strong>0.3%</strong>. The published Pixel ladder is a single same-session run (16 July, corrected build), so its baseline and arch numbers shared identical conditions; the raw JSON for every run is in <code>results/</code>, including the ones that disagree with each other. <strong>Two:</strong> "KleidiAI adds nothing" means <em>on the two chips where it was isolated against a KleidiAI-free control</em> — flat on the 2a, −3.6% on the Pixel. The A34's optimized build carries both levers at once, so its 3.88× is arch flags and KleidiAI together rather than the flags alone; going by the Pixel, the flags-alone figure there would be slightly higher. On SME2 silicon or with other quants the answer may flip, and we would publish that too. <strong>Three:</strong> the Realme's 1.00× is a result about <em>compiler flags</em>, not about the phone being slow — the floor it marks is architectural, and any pre-dotprod chip should land on it. Nothing here is presented as a law of Arm phones. Which is precisely why the product ships a measurement loop instead of a lookup table.</p>
     </div>
     <p class="body-2 fade">Next: more devices through the same harness — each one's ladder published beside these, whatever it says — plus the quantization sweep (Q4_0 vs Q4_K_M vs Q8_0), energy per token via the battery sensor, and big.LITTLE speculative decoding. The llama.rn binary audit is done — its prebuilts carry the fast kernels and dispatch by feature, which is why the app can tune runtime levers instead of recompiling.</p>
   </div>

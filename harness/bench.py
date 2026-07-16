@@ -39,14 +39,23 @@ DEVICE_DIR = "/data/local/tmp/pockettune"
 #   kleidiai-norepack  arch flags + KleidiAI, repack disabled  → KleidiAI's true standalone value
 #   dp-arch          -march=armv8.2a+dotprod  (NO i8mm — the Galaxy A34 target)
 #   dp-kleidiai      dotprod-only + KleidiAI
+#   dp-arch-clean    -march=armv8.2a+dotprod, KleidiAI genuinely OFF
+#   v82              -march=armv8.2-a  (fp16 only, NO dotprod — pre-dotprod chips)
+#
+# The four builds marked below were configured with an unexpanded `$kai` shell
+# variable, which CMake reads as a truthy string: they have KleidiAI compiled in
+# despite their names. dp-arch/dp-kleidiai are therefore the same binary, so any
+# comparison between them measures nothing. dp-arch-clean is the honest rebuild.
 BUILDS = {
     "generic":           "build-android-base",
     "arch":              "build-android-arch",
     "kleidiai":          "build-android-kai",
-    "arch-norepack":     "build-android-arch-norepack",
+    "arch-norepack":     "build-android-arch-norepack",   # $kai — KleidiAI is IN this build
     "kleidiai-norepack": "build-android-kai-norepack",
-    "dp-arch":           "build-android-dp-arch",
+    "dp-arch":           "build-android-dp-arch",         # $kai — KleidiAI is IN this build
     "dp-kleidiai":       "build-android-dp-kai",
+    "dp-arch-clean":     "build-android-dp-arch-clean",
+    "v82":               "build-android-v82",
 }
 # Default ladder for an i8mm-capable device.
 DEFAULT_VARIANTS = ["generic", "arch", "kleidiai"]

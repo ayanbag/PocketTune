@@ -40,6 +40,7 @@ const KNOWN_DEVICES: Record<string, { name: string; soc: string }> = {
   A142: { name: 'Nothing Phone (2a)', soc: 'MediaTek Dimensity 7200 Pro' },
   'SM-A346E': { name: 'Samsung Galaxy A34 5G', soc: 'MediaTek Dimensity 1080' },
   'Pixel 7a': { name: 'Google Pixel 7a', soc: 'Google Tensor G2' },
+  RMX1971: { name: 'Realme 5 Pro', soc: 'Qualcomm Snapdragon 710' },
 };
 
 /** Marketing name for a Platform model code, when we know it. */

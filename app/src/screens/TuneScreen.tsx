@@ -34,9 +34,10 @@ function replySeconds(decodeTps: number): number {
   return decodeTps > 0 ? Math.round((REPLY_TOKENS / decodeTps) * 10) / 10 : 0;
 }
 
-function LiveDot({ theme }: { theme: Theme }) {
+function StatusDot({ theme, live }: { theme: Theme; live: boolean }) {
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
+    if (!live) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 0.25, duration: 800, useNativeDriver: true }),
@@ -45,7 +46,7 @@ function LiveDot({ theme }: { theme: Theme }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [opacity]);
+  }, [opacity, live]);
   return (
     <Row style={{ gap: 5 }}>
       <Animated.View
@@ -53,22 +54,45 @@ function LiveDot({ theme }: { theme: Theme }) {
           width: 6,
           height: 6,
           borderRadius: 3,
-          backgroundColor: theme.accent,
-          opacity,
+          backgroundColor: live ? theme.accent : theme.inkMuted,
+          opacity: live ? opacity : 1,
         }}
       />
-      <Text style={[type.caption, { color: theme.inkMuted }]}>LIVE</Text>
+      <Text style={[type.caption, { color: theme.inkMuted }]}>
+        {live ? 'LIVE' : 'RECORDED'}
+      </Text>
     </Row>
   );
 }
 
 /**
- * Owns the 2.5 Hz sampler so only the meters repaint at that rate, not the
- * whole screen. Rendered only while a sweep runs — the cores are the subject
- * of the Tune tab, and nowhere else.
+ * Live mode owns the 2.5 Hz sampler so only the meters repaint at that rate,
+ * not the whole screen, and feeds each sample to the store so it can be
+ * attributed to the config being benched. Recorded mode replays the winning
+ * config's mean load after the sweep — same meters, frozen data.
  */
-function CoreLoadPanel({ theme, profile }: { theme: Theme; profile: DeviceProfile }) {
-  const { load, supported } = useCoreLoad(profile.totalCores);
+function CoreLoadPanel({
+  theme,
+  profile,
+  recordedLoad,
+  recordedLabel,
+}: {
+  theme: Theme;
+  profile: DeviceProfile;
+  /** when set, the panel is a frozen replay of the winning config */
+  recordedLoad?: number[];
+  recordedLabel?: string | null;
+}) {
+  const live = recordedLoad == null;
+  // Hook order must not depend on mode: a zero core count disables sampling.
+  const sampled = useCoreLoad(live ? profile.totalCores : 0);
+  const { reportCoreLoad } = useStore();
+  useEffect(() => {
+    if (live && sampled.supported) reportCoreLoad(sampled.load);
+  }, [live, sampled.load, sampled.supported, reportCoreLoad]);
+
+  const load = live ? sampled.load : recordedLoad;
+  const supported = live ? sampled.supported : true;
   const busyCpus = load
     .map((l, cpu) => ({ l, cpu }))
     .filter(x => x.l >= BUSY)
@@ -101,7 +125,7 @@ function CoreLoadPanel({ theme, profile }: { theme: Theme; profile: DeviceProfil
         <Text style={[type.caption, { color: theme.inkMuted, textTransform: 'uppercase' }]}>
           Inference load · per core
         </Text>
-        <LiveDot theme={theme} />
+        <StatusDot theme={theme} live={live} />
       </Row>
       <CoreMeters
         theme={theme}
@@ -110,10 +134,18 @@ function CoreLoadPanel({ theme, profile }: { theme: Theme; profile: DeviceProfil
         load={load}
       />
       <Text style={[type.footnote, { color: theme.inkMuted, marginTop: spacing.m }]}>
-        Load from PocketTune's own inference threads, not system-wide CPU use.
-        {busyCpus.length > 0
-          ? ` Running on ${formatCpuRanges(busyCpus)} · ${busyClusters.join(' + ')}.`
-          : ''}
+        {live
+          ? "Load from PocketTune's own inference threads, not system-wide CPU use." +
+            (busyCpus.length > 0
+              ? ` Running on ${formatCpuRanges(busyCpus)} · ${busyClusters.join(' + ')}.`
+              : '')
+          : `Mean load while the winning config${
+              recordedLabel ? ` (${recordedLabel})` : ''
+            } was benched${
+              busyCpus.length > 0
+                ? ` — ran on ${formatCpuRanges(busyCpus)} · ${busyClusters.join(' + ')}`
+                : ''
+            }.`}
       </Text>
     </View>
   );
@@ -251,6 +283,18 @@ export function TuneScreen({ theme }: { theme: Theme }) {
               </Text>
             </View>
           )}
+
+          {!tune.running &&
+            profile &&
+            tune.recordedLoad != null &&
+            tune.liveModelId === selectedModelId && (
+              <CoreLoadPanel
+                theme={theme}
+                profile={profile}
+                recordedLoad={tune.recordedLoad}
+                recordedLabel={tune.recordedLabel}
+              />
+            )}
 
           {livePoints.length > 0 && (
             <View>

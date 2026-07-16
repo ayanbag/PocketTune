@@ -31,7 +31,7 @@ Almost every on-device LLM app ships one generic arm64 build and one static conf
 — using none of the chip-specific instructions available, and leaving most of the phone's speed
 unused before a single token is even generated (see [Headline result](#headline-result) below).
 The obvious fix — "target the phone with the best feature list" — doesn't even point in the right
-direction: measured across three real phones, the one with **no** `i8mm` beat the one that has it.
+direction: measured across four real phones, the one with **no** `i8mm` beat the one that has it.
 No spec sheet predicts that; only running the benchmark does.
 
 **PocketTune exists because the fastest configuration for a phone can only be discovered by running
@@ -41,15 +41,17 @@ you a fast, fully offline chat app running it.
 
 ## Headline result
 
-**3.88× – 5.59× faster prompt processing**, measured on three real phones. Same Llama 3.2 1B Q4_0
-model, same llama.cpp source, same lever — Arm-aware build flags plus llama.cpp's Q4_0 repack. Only
-the silicon changes.
+**3.88× – 5.27× faster prompt processing** on the three phones whose silicon has something to
+unlock — and a measured **1.00× floor** on a fourth that doesn't. Same Llama 3.2 1B Q4_0 model, same
+llama.cpp source, same lever — Arm-aware build flags plus llama.cpp's Q4_0 repack. Only the silicon
+changes.
 
-| Phone | SoC | `i8mm`? | Prefill | Decode |
+| Phone | SoC | `dotprod`/`i8mm`? | Prefill | Decode |
 |---|---|---|---|---|
-| Google Pixel 7a | Google Tensor G2 | **no** | **5.59×** (24.7 → 138.0 t/s) | 2.04× |
-| Nothing Phone 2a | Dimensity 7200 Pro | **yes** | **4.94×** (20.5 → 101.4 t/s) | 1.34× |
-| Samsung Galaxy A34 5G | Dimensity 1080 | **no** | **3.88×** (18.5 → 71.7 t/s) | 1.44× |
+| Google Pixel 7a | Google Tensor G2 | yes / **no** | **5.27×** (27.2 → 143.5 t/s) | 2.11× |
+| Nothing Phone 2a | Dimensity 7200 Pro | yes / **yes** | **4.94×** (20.5 → 101.4 t/s) | 1.34× |
+| Samsung Galaxy A34 5G | Dimensity 1080 | yes / **no** | **3.88×** (18.5 → 71.7 t/s) | 1.44× |
+| Realme 5 Pro | Snapdragon 710 | **no / no** | **1.00×** (14.9 → 14.8 t/s — nothing to unlock) | 1.00× |
 
 Raw data: [results/](results/). Every number traces to a committed JSON file.
 
@@ -66,7 +68,7 @@ the phone in your hand.
 
 ## The app
 
-Five tabs, all TypeScript (React Native + [llama.rn](https://github.com/mybigday/llama.rn)):
+Four tabs, all TypeScript (React Native + [llama.rn](https://github.com/mybigday/llama.rn)):
 
 | Tab | What it does |
 |---|---|
@@ -74,7 +76,10 @@ Five tabs, all TypeScript (React Native + [llama.rn](https://github.com/mybigday
 | **Models** | Downloads and manages GGUF models (or picks up ones you `adb push`) |
 | **Tune** | Runs a llama-bench-style sweep on-device (thread counts × flash attention × quantized KV cache), charts every config, recommends the winner, applies it in one tap |
 | **Chat** | Offline assistant running the applied config, with measured tok/s on every reply |
-| **Lab** | The published harness evidence (attribution ladder, thread-scaling curves) plus this phone's own tuning history — every number traceable to raw JSON in `results/` |
+
+The published harness evidence (attribution ladder, thread-scaling curves) lives on the
+[project site](site/) instead of in the app — every number there traces back to raw JSON in
+`results/`.
 
 Where the kernel exposes the battery rails (`/sys/class/power_supply/battery`), the sweep also
 reports **tokens per joule** per config.
@@ -119,8 +124,6 @@ Tip: skip the in-app download by pushing a GGUF you already have:
    *feels* like). Tap **Apply**.
 4. **Chat** — a fully offline assistant running the applied config. Every reply shows its measured
    decode speed.
-5. **Lab** — the published harness evidence for benchmarked devices, plus this phone's own tuning
-   history.
 
 For sweep numbers you intend to compare or publish: charge above 30%, unplug, enable airplane
 mode, and let the phone cool between runs — same rules the harness enforces.
@@ -133,7 +136,7 @@ runtime CPU-feature detection — no C++/Kotlin is written in this project.
 ```mermaid
 flowchart TD
     subgraph TS["PocketTune app — all authored code is TypeScript"]
-        UI["Five screens<br/>Device · Models · Tune · Chat · Lab"]
+        UI["Four screens<br/>Device · Models · Tune · Chat"]
         CORE["Tuning core<br/>cpu.ts detect · tuner.ts plan/score · battery.ts power · store.ts state"]
         UI <--> CORE
     end
@@ -157,10 +160,13 @@ The published evidence has its own pipeline, entirely outside the app:
 ```mermaid
 flowchart LR
     H["harness/bench.py<br/>adb-driven sweep"] --> R["results/*.json<br/>raw, committed"]
-    R --> T["tools/make_app_evidence.py"]
-    T --> E["app/src/data/evidence.json<br/>bundled into the Lab tab"]
     R --> W["site/ device panels"]
+    R --> T["tools/make_app_evidence.py<br/>(dormant — was for the removed Lab tab)"]
 ```
+
+`tools/make_app_evidence.py` predates the in-app Lab tab, which was cut once it was scoped to
+on-device-only data; the script and its output (`app/src/data/evidence.json`) are unused unless
+that tab returns.
 
 ### The optimizations, and what each achieved
 
@@ -169,19 +175,20 @@ finding — the lever generalizes, its value does not.
 
 | Lever | Kind | When | Nothing 2a (`i8mm`) | Galaxy A34 (`dotprod`) | Pixel 7a (`dotprod`) |
 |---|---|---|---|---|---|
-| Arch flags (`-march=…`) | SIMD code generation | build-time | **4.94× prefill**, 1.34× decode | **3.88× prefill**, 1.44× decode | **5.59× prefill**, 2.04× decode |
-| Weight repacking | data layout | model load | folded into the gain above; isolated by the `norepack` builds | same | same |
-| KleidiAI kernels | kernel library | build-time | **≈0%** | **≈0%** (+0.03%) | **≈0%** (137.95 vs 137.95) |
+| Arch flags (`-march=…`) | SIMD code generation | build-time | **4.94× prefill**, 1.34× decode | **3.88× prefill**, 1.44× decode | **5.27× prefill**, 2.11× decode |
+| Weight repacking | data layout | model load | folded into the gain above (the `norepack` isolation was voided by the `$kai` build bug) | same | same |
+| KleidiAI kernels | kernel library | build-time | **≈0%** | not isolated — this chip's build carries both levers | **−3.6%** (143.5 → 138.4) |
 | Q4_0 quantization | memory traffic | model format | 1B model in ~700 MB; quant sweep (vs Q4_K_M, Q8_0) is next | same | same |
 | Best thread count | big.LITTLE scheduling | runtime, in-app | **2** | **2** | **4** (tri-cluster) |
-| Cost of getting it wrong | — | — | — | decode 17.3 → 12.8 t/s at 6 thr (**−26%**) | prefill 138.0 → 97.5 t/s at 6 thr (**−29%**) |
+| Cost of getting it wrong | — | — | — | decode 17.3 → 12.8 t/s at 6 thr (**−26%**) | prefill 143.5 → 101.8 t/s at 6 thr (**−29%**) |
 | Flash attention, KV q8_0 | memory traffic | runtime, in-app | swept per device — helps some chips, hurts others | swept per device | swept per device |
 | Tokens per joule | energy measurement | runtime, in-app | per-config efficiency, sampled from the battery rails | same | same |
 
 Two rows deserve emphasis, because both defeat any static default:
 
-**Arch flags don't rank by feature list.** The Pixel has no `i8mm` and wins anyway (5.59× vs the
-2a's 4.94×). Whatever you would have predicted from `/proc/cpuinfo`, the silicon disagrees.
+**Arch flags don't rank by feature list.** The Pixel has no `i8mm` and wins anyway (5.27× vs the
+2a's 4.94×) — while the pre-dotprod Realme gets exactly nothing. Whatever you would have predicted
+from `/proc/cpuinfo`, the silicon disagrees.
 
 **The best thread count is different on every phone, and on one phone it changes with the build.**
 The Pixel wants 4 threads because it has exactly four fast cores; the MediaTek phones want 2. On the
@@ -200,7 +207,7 @@ battery efficiency, and local AI experiences on Arm-powered phones."* PocketTune
 inference on Arm CPUs at two levels, and it is worth being precise about which level produces which
 gain, because they are not the same size and they do not reach the user the same way.
 
-**Tier 1 — build-time: arm64 codegen and weight layout.** This is where the 3.88×–5.59× lives.
+**Tier 1 — build-time: arm64 codegen and weight layout.** This is where the 3.88×–5.27× lives.
 `-march=armv8.2-a+dotprod(+i8mm)` lets the compiler emit the SIMD instructions the chip actually
 has, and llama.cpp's Q4_0 repack rewrites the weights into the layout those instructions want. The
 harness proves this by building the *same* llama.cpp source seven ways and running the ladder on
@@ -218,20 +225,28 @@ answer even flips when the binary changes (6 threads on the generic build, 2 onc
 on). A 5th thread on the Pixel costs 29% of prefill. This is the tier the app measures on-device,
 scores, and applies, and it is why the product is a measurement loop rather than a lookup table.
 
-Mapped onto the challenge's own list of what counts as optimization:
+Mapped onto the optimization categories judges score against, stated plainly including where we
+**don't** claim anything:
 
-| The challenge asks for | PocketTune's answer | Evidence |
-|---|---|---|
-| *Improved tokens/sec, TTFT, or latency* | **3.88×–5.59× prefill**, up to **2.04× decode**, on three real phones | [results/](results/), [Headline result](#headline-result) |
-| *Battery efficiency* | **tokens per joule** sampled from the battery rail, per config, in the on-device sweep | Tune tab; `app/src/lib/battery.ts` |
-| *Optimize an existing framework/library/app to run better on Arm* | Arm-aware llama.cpp build ladder + KleidiAI, driven per-device | [harness/](harness/), `vendor/llama.cpp/build-android-*` |
-| *Improved tools, workflows, docs* | one-command harness that adds a new phone and emits the JSON the app and site consume | [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md) |
-| *Local AI experience under on-device constraints* | fully offline chat on the applied config; nothing leaves the phone after download | Chat tab |
+| Category | Do we target it? | PocketTune's answer | Evidence |
+|---|---|---|---|
+| **Model speed** (tok/s, TTFT, latency) | **Yes — the headline claim** | **3.88×–5.27× prefill**, up to **2.11× decode**, from Arm-aware build flags; further runtime gains from per-phone thread/flash-attn/KV-quant tuning | [results/](results/), [Headline result](#headline-result) |
+| **Arm-specific optimization** | **Yes — the core thesis** | `-march=…+dotprod(+i8mm)` codegen, KleidiAI microkernel evaluation, big.LITTLE-aware thread placement, all measured (not assumed) on 4 physical Arm chips | [harness/](harness/), `vendor/llama.cpp/build-android-*` |
+| **Developer experience** | **Yes** | one-command harness that adds a new phone and emits the JSON the app and site consume; in-app Tune tab turns a manual benchmarking chore into a single tap | [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md), Tune tab |
+| **Model size** | **No** | we use the model's existing Q4_0 GGUF as shipped — no quantization or compression work of our own; a same-model quant sweep (Q4_0 vs Q4_K_M vs Q8_0) is a listed next step, not something claimed today | — |
+| **Model quality** | **No** | no fine-tuning, distillation, or output-quality work — Llama 3.2 1B's weights and behavior are untouched | — |
+| **Inference server speed** | **No** | there is no server — inference runs entirely on-device inside the app; throughput/latency gains are reported as on-device tok/s and TTFT, not server throughput | — |
 
-We did not train, fine-tune, or invent a model, and we did not write new CPU kernels — the optimization is of *AI inference on Arm silicon*, which is what the
-track asks for. KleidiAI is in the ladder and came out **flat on all three phones** for Q4_0; it is
-reported anyway ([below](#kleidiai-no-measurable-gain-on-any-of-the-three-phones)), because a project
-whose thesis is "measure, don't assume" does not get to hide the lever that measured zero.
+We did not train, fine-tune, or invent a model, and we did not write new CPU kernels — the
+optimization is of *AI inference on Arm silicon*, via build flags, kernel selection, and runtime
+scheduling, which is where the four phones actually disagreed. Battery efficiency (**tokens per
+joule**, sampled from the battery rail per config in the sweep) sits alongside model speed as a
+secondary, device-dependent metric — `app/src/lib/battery.ts`, Tune tab.
+
+KleidiAI is in the ladder and came out **flat on one chip and −3.6% on another** for Q4_0; it is
+reported anyway — including the build bug that voided the first comparisons
+([below](#kleidiai-zero-on-one-chip-negative-on-another--and-an-honest-correction)) — because a
+project whose thesis is "measure, don't assume" does not get to hide the lever that measured zero.
 
 ## Reproduce the published numbers (headless harness)
 
@@ -264,33 +279,43 @@ same thermal state, so the attribution ladder compares like with like.
 
 **Known variance, stated plainly.** The Pixel 7a's `generic` baseline is noisy: it moved ±9% across
 repeat runs, and one early run on a cold, freshly-idle phone came in ~25% high before settling into
-a steady state. Its *arch* builds, by contrast, repeat to within **0.3%** (137.95 vs 138.31 t/s).
-The published Pixel figure is the **conservative** run, so 5.59× is if anything an understatement —
-the flattering run would have read 6.10×. Both runs are committed to [results/](results/); nothing
-is dropped for being inconvenient. The two MediaTek phones did not show this instability.
+a steady state. Its *arch*-flagged builds, by contrast, repeat to within **0.3%** — including
+across sessions and across the build fix (the contaminated 13 July `dp-arch` at 137.95 t/s matches
+the 16 July KleidiAI-enabled build at 138.39 t/s, which is exactly what it was). The published
+Pixel ladder is a single same-session run (16 July, corrected build), so baseline and arch numbers
+shared identical conditions. All runs are committed to [results/](results/); nothing is dropped for
+being inconvenient. The two MediaTek phones did not show this instability.
 
 ## Devices covered so far
 
 Devices are listed here once they have run through the harness. This is the full extent of what has
 been measured.
 
-| Device | SoC | CPU features | Cores | Best threads | Prefill gain from arch flags | Status |
+| Device | SoC | CPU features | Cores | Best threads | Prefill gain, optimized vs generic | Status |
 |---|---|---|---|---|---|---|
 | Nothing Phone 2a | MediaTek MT6886 (Dimensity 7200 Pro) | `asimddp`, **`i8mm`**, `sve2`, `bf16` | 2× A715 @ 2.8 GHz + 6× A510 @ 2.0 GHz | 2 | **4.94×** (20.5 → 101.4 t/s) | ✅ full build sweep in [results/](results/) |
 | Samsung Galaxy A34 5G | MediaTek MT6877 (Dimensity 1080) | `asimddp`, **no `i8mm`**, no SVE | 2× A78 @ 2.6 GHz + 6× A55 @ 2.0 GHz | 2 | **3.88×** (18.5 → 71.7 t/s) | ✅ full build sweep in [results/](results/) |
-| Google Pixel 7a | Google Tensor G2 (GS201) | `asimddp`, **no `i8mm`**, no SVE | 2× X1 @ 2.85 + 2× A78 @ 2.35 + 4× A55 @ 1.8 GHz | **4** | **5.59×** (24.7 → 138.0 t/s) | ✅ full build sweep in [results/](results/) |
+| Google Pixel 7a | Google Tensor G2 (GS201) | `asimddp`, **no `i8mm`**, no SVE | 2× X1 @ 2.85 + 2× A78 @ 2.35 + 4× A55 @ 1.8 GHz | **4** | **5.27×** (27.2 → 143.5 t/s) | ✅ full build sweep in [results/](results/) |
+| Realme 5 Pro | Qualcomm Snapdragon 710 (SDM710) | **no `asimddp`**, no `i8mm`, no SVE | 2× Kryo 360 Gold (A75) @ 2.3 + 6× Kryo 360 Silver (A55) @ 1.7 GHz | **6** | **1.00×** (14.9 → 14.8 t/s — nothing to unlock) | ✅ generic + armv8.2-a sweep in [results/](results/) |
 
-**The three phones disagree, and the way they disagree is the whole point.**
+**The four phones disagree, and the way they disagree is the whole point.**
 
 We expected `i8mm` — the matrix-multiply instructions only the 2a has — to explain the ranking.
-**It doesn't.** The Pixel 7a has **no `i8mm` at all** and still gets the *largest* gain of the three
-(5.59×), beating the chip that has it (4.94×). Its Cortex-X1 cores simply extract more from ordinary
+**It doesn't.** The Pixel 7a has **no `i8mm` at all** and still gets the *largest* gain
+(5.27×), beating the chip that has it (4.94×). Its Cortex-X1 cores simply extract more from ordinary
 dot-product code than the 2a's A715s extract from the fancy instructions. A reasonable engineer
 reading the spec sheets would have predicted the ranking backwards.
 
-The optimal **thread count** differs too: the two big.LITTLE phones want 2 threads, but the
-tri-cluster Pixel wants **4** — it has exactly four fast cores (2× X1 + 2× A78 at cpu4–7), so a 5th
-thread spills onto a little A55 and prefill drops 29% (138.0 → 97.5 t/s). On the A34 the best thread
+And the Realme 5 Pro marks the floor: its Snapdragon 710 predates `dotprod`, so every optimized
+build dies with SIGILL, and a build compiled for the features it *does* have (`-march=armv8.2-a`)
+lands within noise of generic — **1.00×**. Below dotprod there is nothing for compiler flags to
+unlock, and that floor is now a measured number, not a guess.
+
+The optimal **thread count** differs too — four phones, four answers (2 / 2 / 4 / 6). The two
+big.LITTLE phones want 2 threads; the tri-cluster Pixel wants **4** — it has exactly four fast cores
+(2× X1 + 2× A78 at cpu4–7), so a 5th thread spills onto a little A55 and prefill drops 29%
+(143.5 → 101.8 t/s). The Realme inverts the rule entirely and wants all **6**: its A75-class big
+cores are weak enough that the little cores still add real throughput. On the A34 the best thread
 count even *changes with the build*: 6 threads for the generic build, 2 once the arch flags are on.
 
 No number here predicts another, which is why the app ships the measurement loop rather than a
@@ -299,21 +324,40 @@ hardcoded config.
 **Adding your phone** takes one command and no code: see
 [docs/testing-on-a-new-phone.md](docs/testing-on-a-new-phone.md). The harness detects the chip,
 picks its build variants, and writes a `results/<device>-<timestamp>.json` — which is also the
-unit the app's Lab tab and the project site consume.
+unit the project site consumes.
 
-## KleidiAI: no measurable gain on any of the three phones
+## KleidiAI: zero on one chip, negative on another — and an honest correction
 
-On **all three** phones measured, KleidiAI microkernels land **within noise of the plain arch-flags
-build** for Q4_0 — flat on the 2a, +0.03% on the A34, and on the Pixel 7a identical to four decimal
-places (137.95 vs 137.95 t/s). llama.cpp's own aarch64 repack path already exploits dotprod/i8mm
-well, so the speedups are attributable to arch-aware codegen plus repacking, not to any single
-kernel library.
+On the **Nothing Phone 2a** (the i8mm chip), KleidiAI microkernels land **within noise of the plain
+arch-flags build** for Q4_0. llama.cpp's own aarch64 repack path already exploits i8mm well, so the
+speedup there is attributable to arch-aware codegen plus repacking, not to any single kernel
+library. That comparison was always clean: the `arch` build genuinely has KleidiAI off and the
+`kleidiai` build has it on.
 
-This is the result we least wanted and are reporting anyway. A project whose entire claim is
-"measure, don't assume" does not get to quietly drop the lever that came out flat — three times, on
-three different SoCs from two vendors. The attribution ladder in `results/` isolates each lever. The
-finding is specific to Q4_0 on these chips; other quantizations and SME2 silicon may well disagree,
-which is why KleidiAI stays in the sweep.
+**The correction.** The original dotprod-only comparisons (A34, Pixel 7a) were voided by a
+build-system bug — an unexpanded `$kai` shell variable that CMake evaluated as truthy — which
+compiled KleidiAI into the `dp-arch` builds that were supposed to be its control group. The tell
+was in our own published numbers: the Pixel's `dp-arch` and `dp-kleidiai` prefill agreed to four
+decimal places (137.95 vs 137.95 t/s) because they were the same binary benchmarked twice.
+
+**The corrected re-run (Pixel 7a, 16 July, `dp-arch-clean` verified KleidiAI-free) came back
+negative, not neutral: KleidiAI costs ~3.6% prefill (143.5 → 138.4 t/s) and ~3.3% decode there.**
+llama.cpp's repack path simply beats Arm's kernels on Tensor G2 for Q4_0. The re-run also
+cross-validated the diagnosis — the contaminated 13 July "dp-arch" (137.95) matches the 16 July
+KleidiAI-enabled build (138.39) to 0.3%, exactly the arch-build repeatability — and revealed the
+originally published arch number was KleidiAI-depressed: the true arch-flags figure is *faster*
+(143.5 vs 137.95 t/s).
+
+The **Galaxy A34's** optimized build carries KleidiAI alongside the arch flags, so its 3.88× is the
+two levers together rather than the flags in isolation — which is why no separate KleidiAI figure is
+published for that chip. Going by the Pixel, where isolating the two showed KleidiAI costing a few
+percent, the flags-alone number there would be slightly *higher* than the 3.88× published.
+
+This is the result we least wanted and are reporting anyway — including the part where our own
+methodology had a hole. A project whose entire claim is "measure, don't assume" does not get to
+quietly drop the lever that came out flat, and it does not get to quietly patch a bad control group
+either. The finding is specific to Q4_0 on these chips; other quantizations and SME2 silicon may
+well disagree, which is why KleidiAI stays in the sweep.
 
 ## Repository layout
 

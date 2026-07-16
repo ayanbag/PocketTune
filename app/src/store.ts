@@ -64,6 +64,10 @@ interface TuneState {
   /** which model the live points belong to — they are not transferable */
   liveModelId: string | null;
   error: string | null;
+  /** mean per-core load recorded while the winning config was benched */
+  recordedLoad: number[] | null;
+  /** which config recordedLoad belongs to */
+  recordedLabel: string | null;
 }
 
 interface AppState {
@@ -104,6 +108,8 @@ interface AppState {
   /** re-checks the models dir for sideloaded files and stale statuses */
   rescanModels: () => Promise<void>;
   startTune: (mode: 'quick' | 'full') => Promise<void>;
+  /** live core-load sample from the Tune panel, attributed to the config being benched */
+  reportCoreLoad: (load: number[]) => void;
   applyBest: () => Promise<void>;
   ensureChatEngine: () => Promise<void>;
   sendMessage: (text: string) => Promise<void>;
@@ -115,6 +121,14 @@ interface AppState {
 
 /** Streamed tokens are coalesced into state paints no faster than this. */
 const STREAM_PAINT_MS = 150;
+
+/**
+ * Per-config core-load accumulation during a sweep, keyed by config label.
+ * Deliberately NOT reactive state: samples arrive at 2.5 Hz and nothing needs
+ * to repaint on them — only the mean for the winning config enters the store,
+ * once, when the sweep finishes.
+ */
+const coreLoadAcc = new Map<string, { sum: number[]; n: number }>();
 
 const downloads = new Map<string, DownloadHandle>();
 let activeStream: StreamHandle | null = null;
@@ -198,6 +212,8 @@ export const useStore = create<AppState>((set, get) => ({
     livePoints: [],
     liveModelId: null,
     error: null,
+    recordedLoad: null,
+    recordedLabel: null,
   },
   engineStatus: 'idle',
   engineError: null,
@@ -344,7 +360,15 @@ export const useStore = create<AppState>((set, get) => ({
         history: s.history.filter(r => r.modelId !== id),
         tune:
           s.tune.liveModelId === id
-            ? { ...s.tune, livePoints: [], liveModelId: null, progress: 0, error: null }
+            ? {
+                ...s.tune,
+                livePoints: [],
+                liveModelId: null,
+                progress: 0,
+                error: null,
+                recordedLoad: null,
+                recordedLabel: null,
+              }
             : s.tune,
       };
     });
@@ -402,6 +426,7 @@ export const useStore = create<AppState>((set, get) => ({
     const state = models[selectedModelId];
     if (!profile || !model || state?.status !== 'ready' || get().tune.running) return;
 
+    coreLoadAcc.clear();
     set({
       engineStatus: 'loading',
       tune: {
@@ -414,6 +439,8 @@ export const useStore = create<AppState>((set, get) => ({
         livePoints: [],
         liveModelId: selectedModelId,
         error: null,
+        recordedLoad: null,
+        recordedLabel: null,
       },
     });
     try {
@@ -437,12 +464,25 @@ export const useStore = create<AppState>((set, get) => ({
       if (!points.length) throw new Error('Sweep produced no results');
       const run = finishRun(points, model.id, model.file, mode);
       const history = [run, ...get().history].slice(0, 20);
+      // Freeze the winner's core load so the panel flips Live → Recorded in
+      // the same paint the results land: mean of the samples taken while the
+      // winning config was the one being benched.
+      const acc = coreLoadAcc.get(run.best.label);
+      const recordedLoad =
+        acc && acc.n > 0 ? acc.sum.map(v => v / acc.n) : null;
+      coreLoadAcc.clear();
       set(s => ({
         history,
         // The context is still on the last config the sweep tried, not the
         // winner — force Chat to reload rather than inherit a stray config.
         engineStatus: 'idle',
-        tune: { ...s.tune, running: false, progress: 1 },
+        tune: {
+          ...s.tune,
+          running: false,
+          progress: 1,
+          recordedLoad,
+          recordedLabel: recordedLoad ? run.best.label : null,
+        },
       }));
       await persist(get);
     } catch (err) {
@@ -454,6 +494,19 @@ export const useStore = create<AppState>((set, get) => ({
           error: String((err as Error)?.message ?? err),
         },
       }));
+    }
+  },
+
+  reportCoreLoad: load => {
+    const { tune } = get();
+    // Samples are only attributable while a named config is actually running.
+    if (!tune.running || !tune.currentLabel) return;
+    const acc = coreLoadAcc.get(tune.currentLabel);
+    if (acc) {
+      for (let i = 0; i < load.length; i++) acc.sum[i] = (acc.sum[i] ?? 0) + load[i];
+      acc.n++;
+    } else {
+      coreLoadAcc.set(tune.currentLabel, { sum: [...load], n: 1 });
     }
   },
 

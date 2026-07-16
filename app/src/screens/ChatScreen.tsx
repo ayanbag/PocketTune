@@ -509,7 +509,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
         />
       )}
 
-      {/* ChatGPT-style pill: input and send button share one rounded field. */}
+     
       <View
         style={{
           flexDirection: 'row',
@@ -528,7 +528,7 @@ export function ChatScreen({ theme }: { theme: Theme }) {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder={modelReady ? 'Ask anything — works offline' : 'Get a model first'}
+          placeholder={modelReady ? 'Ask anything' : 'Get a model first'}
           placeholderTextColor={theme.inkMuted}
           editable={modelReady && !generating}
           multiline

@@ -4,12 +4,14 @@
  * with ≥8px end markers ringed in surface color, hairline solid gridlines,
  * selective direct labels in ink tokens (text never wears the series color).
  */
-import React, { useState } from 'react';
-import { Text as RNText, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Text as RNText, View } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 import { Theme, type } from '../theme';
-import { BUSY } from '../lib/coreload';
+import { BUSY, SAMPLE_MS } from '../lib/coreload';
 import type { CoreCluster } from '../types';
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 // -------------------------------------------------------------------- helpers
 
@@ -485,6 +487,38 @@ export function CoreMeters({
     .flatMap(c => c.cpuIds.map(cpu => ({ cpu, maxMhz: c.maxMhz })))
     .sort((a, b) => a.cpu - b.cpu);
 
+  // The sampler delivers a value per core every SAMPLE_MS; rendered raw, the
+  // bars snap 2.5×/s and read as broken. Tween each bar to its new value over
+  // exactly one sample interval so it glides into place as the next one lands.
+  // JS driver: SVG rect geometry isn't native-driver animatable.
+  const anims = useRef(new Map<number, Animated.Value>()).current;
+  const animFor = (cpu: number) => {
+    let v = anims.get(cpu);
+    if (!v) {
+      v = new Animated.Value(0);
+      anims.set(cpu, v);
+    }
+    return v;
+  };
+  useEffect(() => {
+    const timings = cores.map(c =>
+      Animated.timing(animFor(c.cpu), {
+        toValue: Math.max(0, Math.min(1, load[c.cpu] ?? 0)),
+        duration: SAMPLE_MS,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }),
+    );
+    Animated.parallel(timings).start();
+    // cores derives from clusters; anims/animFor are stable refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, clusters]);
+
+  // Threshold coloring, same in live and recorded views: idling green,
+  // working orange, saturated red.
+  const loadColor = (l: number) =>
+    l > 0.85 ? theme.critical : l >= 0.25 ? theme.warning : theme.good;
+
   const gap = 6;
   const maxTileH = 64;
   const topPad = 12; // headroom for the % above the tallest tile
@@ -506,8 +540,8 @@ export function CoreMeters({
             const tileH = Math.max((c.maxMhz / maxMhz) * maxTileH, 24);
             const top = baseY - tileH;
             const l = Math.max(0, Math.min(1, load[c.cpu] ?? 0));
-            const fillH = tileH * l;
             const busy = l >= BUSY;
+            const anim = animFor(c.cpu);
             return (
               <React.Fragment key={c.cpu}>
                 <SvgText
@@ -527,16 +561,14 @@ export function CoreMeters({
                   rx={5}
                   fill={theme.fillStrong}
                 />
-                {fillH >= 1 && (
-                  <Rect
-                    x={x}
-                    y={baseY - fillH}
-                    width={tileW}
-                    height={fillH}
-                    rx={Math.min(4, fillH / 2)}
-                    fill={theme.accent}
-                  />
-                )}
+                <AnimatedRect
+                  x={x}
+                  y={anim.interpolate({ inputRange: [0, 1], outputRange: [baseY, top] })}
+                  width={tileW}
+                  height={anim.interpolate({ inputRange: [0, 1], outputRange: [0, tileH] })}
+                  rx={4}
+                  fill={loadColor(l)}
+                />
                 <SvgText
                   x={x + tileW / 2}
                   y={baseY + 12}

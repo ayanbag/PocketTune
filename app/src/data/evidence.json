@@ -507,6 +507,183 @@
       ]
     },
     {
+      "source": "pixel-7a-20260716T171811Z.json",
+      "timestamp_utc": "20260716T171811Z",
+      "device": {
+        "manufacturer": "Google",
+        "model": "Pixel 7a",
+        "soc": "Google GS201",
+        "has_i8mm": false,
+        "has_dotprod": true,
+        "has_sve2": false
+      },
+      "model_file": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+      "params": {
+        "prompt_tokens": 128,
+        "gen_tokens": 64,
+        "repetitions": 5,
+        "threads_swept": [
+          2,
+          4,
+          6
+        ],
+        "cooldown_s": 90
+      },
+      "variants": [
+        {
+          "name": "generic",
+          "label": "Generic arm64",
+          "detail": "Plain armv8-a build \u2014 what a non-optimized app ships",
+          "summary": {
+            "pp128": {
+              "2": 23.962401,
+              "4": 27.215051,
+              "6": 22.371803
+            },
+            "tg64": {
+              "2": 12.278268,
+              "4": 12.712184,
+              "6": 11.604888
+            }
+          },
+          "battery_before": {
+            "level_pct": 24,
+            "temperature_c": 33.5
+          },
+          "battery_after": {
+            "level_pct": 24,
+            "temperature_c": 34.6
+          }
+        },
+        {
+          "name": "dp-arch-clean",
+          "label": "dp-arch-clean",
+          "detail": "",
+          "summary": {
+            "pp128": {
+              "2": 113.623405,
+              "4": 143.492818,
+              "6": 101.786157
+            },
+            "tg64": {
+              "2": 24.747146,
+              "4": 26.831515,
+              "6": 20.403959
+            }
+          },
+          "battery_before": {
+            "level_pct": 24,
+            "temperature_c": 35.0
+          },
+          "battery_after": {
+            "level_pct": 24,
+            "temperature_c": 35.3
+          }
+        },
+        {
+          "name": "dp-kleidiai",
+          "label": "KleidiAI (dotprod)",
+          "detail": "Dotprod-only KleidiAI build",
+          "summary": {
+            "pp128": {
+              "2": 110.445392,
+              "4": 138.387775,
+              "6": 98.633291
+            },
+            "tg64": {
+              "2": 24.38654,
+              "4": 25.954517,
+              "6": 20.686949
+            }
+          },
+          "battery_before": {
+            "level_pct": 24,
+            "temperature_c": 35.5
+          },
+          "battery_after": {
+            "level_pct": 24,
+            "temperature_c": 35.5
+          }
+        }
+      ]
+    },
+    {
+      "source": "rmx1971-20260716T164421Z.json",
+      "timestamp_utc": "20260716T164421Z",
+      "device": {
+        "manufacturer": "realme",
+        "model": "RMX1971",
+        "soc": "",
+        "has_i8mm": false,
+        "has_dotprod": false,
+        "has_sve2": false
+      },
+      "model_file": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+      "params": {
+        "prompt_tokens": 128,
+        "gen_tokens": 64,
+        "repetitions": 5,
+        "threads_swept": [
+          2,
+          4,
+          6
+        ],
+        "cooldown_s": 90
+      },
+      "variants": [
+        {
+          "name": "generic",
+          "label": "Generic arm64",
+          "detail": "Plain armv8-a build \u2014 what a non-optimized app ships",
+          "summary": {
+            "pp128": {
+              "2": 8.900944,
+              "4": 11.92333,
+              "6": 14.938832
+            },
+            "tg64": {
+              "2": 6.091615,
+              "4": 7.523543,
+              "6": 8.798004
+            }
+          },
+          "battery_before": {
+            "level_pct": 100,
+            "temperature_c": 32.5
+          },
+          "battery_after": {
+            "level_pct": 100,
+            "temperature_c": 38.1
+          }
+        },
+        {
+          "name": "v82",
+          "label": "v82",
+          "detail": "",
+          "summary": {
+            "pp128": {
+              "2": 9.072935,
+              "4": 12.102429,
+              "6": 14.843016
+            },
+            "tg64": {
+              "2": 6.103088,
+              "4": 7.585077,
+              "6": 8.761958
+            }
+          },
+          "battery_before": {
+            "level_pct": 100,
+            "temperature_c": 37.1
+          },
+          "battery_after": {
+            "level_pct": 98,
+            "temperature_c": 40.2
+          }
+        }
+      ]
+    },
+    {
       "source": "sm-a346e-20260713T172211Z.json",
       "timestamp_utc": "20260713T172211Z",
       "device": {

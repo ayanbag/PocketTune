@@ -193,10 +193,19 @@ i8mm. Use the `dp-` variants there:
 # i8mm phone:
 python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf \
                         --variants generic arch kleidiai
-# dotprod-only phone:
+# dotprod-only phone (dp-arch-clean is the corrected KleidiAI-free control —
+# the original dp-arch/dp-kleidiai pair both contained KleidiAI via a build bug):
 python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf \
-                        --variants generic dp-arch dp-kleidiai
+                        --variants generic dp-arch-clean dp-kleidiai
+# pre-dotprod phone (no asimddp in the Features line — e.g. Snapdragon 710):
+# every +dotprod build SIGILLs; v82 is plain -march=armv8.2-a
+python harness/bench.py --model models/Llama-3.2-1B-Instruct-Q4_0.gguf \
+                        --variants generic v82
 ```
+
+A phone with **no `asimddp` at all** is the floor case: on the one measured (Realme 5 Pro,
+Snapdragon 710), `v82` landed within noise of `generic` (1.00×) — there is nothing for the flags
+to unlock below dotprod. Expect the interesting number there to be the thread count, not the build.
 
 ## 7. Check nothing crashed
 
