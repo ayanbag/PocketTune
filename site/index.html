@@ -460,8 +460,8 @@
     <div class="arch-grid problem-grid fade">
       <div class="stack">
         <h2>One APK.<br>A dozen different chips.</h2>
-        <p class="lead">Android phones run wildly different Arm silicon underneath the same OS — different matrix instructions, different core layouts, different memory bandwidth. Almost every local-LLM app ships one generic build and hopes for the best, leaving most of the phone's speed unused.</p>
-        <p class="body-2"><strong>PocketTune exists to answer, on the phone in your hand, what the spec sheet can't tell you.</strong></p>
+        <p class="lead">Android phones run wildly different Arm silicon under the same OS: different matrix instructions, different core layouts, different memory bandwidth. Almost every local-LLM app ships one generic build and hopes for the best, which leaves most of the phone's speed unused.</p>
+        <p class="body-2"><strong>PocketTune answers the one thing a spec sheet can't: what's actually fastest on the phone in your hand.</strong></p>
       </div>
       <div class="cards duo">
         <div class="card">
@@ -472,7 +472,7 @@
         <div class="card">
           <div class="num">?</div>
           <h3>the spec sheet lies</h3>
-          <p>The chip with more matrix instructions should win. Measured on four phones, it doesn't — the biggest winner is missing the headline feature entirely.</p>
+          <p>The chip with more matrix instructions should win. Measured on four phones, it doesn't: the biggest winner is missing the headline feature entirely.</p>
         </div>
         <div class="card">
           <div class="num">6 ≠ 2</div>
@@ -498,7 +498,7 @@
       <div class="stat fade"><div class="t">Measured</div><div class="v"><span data-count="0" data-dec="0">0</span><small>%</small></div><div class="l">gain from the library everyone assumes helps</div></div>
       <div class="stat fade"><div class="t">Always</div><div class="v">0</div><div class="l">cloud calls. Nothing leaves the phone.</div></div>
     </div>
-    <p class="small justify fade stats-note">These are the speed ranges across <b id="stat-n"></b>, each one measured against its own unoptimized baseline. The spread <em>is</em> the finding: the same optimization is worth a different amount on different silicon, so no single number describes your phone. <a href="#evidence">See the per-device evidence ›</a></p>
+    <p class="small justify fade stats-note">These are the speed ranges across <b id="stat-n"></b>, each one measured against its own unoptimized baseline. The spread is the whole point: the same optimization is worth a different amount on different silicon, so no single number describes your phone. <a href="#evidence">See the per-device evidence ›</a></p>
   </div>
 </section>
 
@@ -510,7 +510,7 @@
       <p class="lead">One panel per device we've benchmarked. Same model, same workload — only the build changes.</p>
     </div>
     <div id="devices" class="stack lg"></div>
-    <p class="body-2 fade"><strong>Read each ladder top to bottom.</strong> The speedup arrives with the compiler flags — permission to use the matrix instructions that particular silicon already has. Which instructions exist, and what they're worth, is a property of the chip, not of the app. That's the whole argument for measuring instead of assuming.</p>
+    <p class="body-2 fade"><strong>Read each ladder top to bottom.</strong> The speedup shows up with the compiler flags, which are really just permission to use the matrix instructions the silicon already has. Which instructions exist, and what they're worth, is a property of the chip, not the app. That's the reason we measure instead of assume.</p>
   </div>
 </section>
 
@@ -524,20 +524,20 @@
       <div class="card fade">
         <div class="num">1.0–5.6<small>×</small></div>
         <h3>The compiler flag is the whole ballgame — when the silicon plays.</h3>
-        <p>One build flag lets the compiler emit the SIMD instructions the chip already has; most Android builds never pass it. <em>How much</em> it buys moves unpredictably: 1.00×, 3.88×, 4.94×, 5.27× across four phones. It does <em>not</em> track the feature list — the biggest winner has <em>no</em> i8mm at all, and on a chip below dotprod the flag buys nothing, because there is nothing for it to unlock.</p>
+        <p>One build flag lets the compiler emit the SIMD instructions the chip already has, and most Android builds never pass it. How much it buys moves around unpredictably: 1.00×, 3.88×, 4.94×, 5.27× across four phones. It doesn't track the feature list either — the biggest winner has no i8mm at all, and on a chip below dotprod the flag buys nothing, because there's nothing for it to unlock.</p>
       </div>
       <div class="card fade">
         <div class="num">+0<small>%</small></div>
         <h3>KleidiAI adds nothing — and can even cost.</h3>
-        <p>Arm's own acceleration library, tested head-to-head: no measurable gain on the i8mm chip, and a measured <em>−3.6%</em> on the Pixel 7a — plain compiled code already saturates this hardware for Q4_0, and llama.cpp's own repack path beats the kernels on Tensor G2. On other quants and other silicon it may well flip. It stays in the sweep for exactly that reason.</p>
+        <p>Arm's own acceleration library, tested head-to-head: no measurable gain on the i8mm chip, and a measured −3.6% on the Pixel 7a. Plain compiled code already saturates this hardware for Q4_0, and llama.cpp's own repack path beats the kernels on Tensor G2. On other quants and other silicon it may well flip, which is why it stays in the sweep.</p>
       </div>
       <div class="card fade">
         <div class="num">2 · 2 · 4 · 6</div>
         <h3>The right thread count is per-phone.</h3>
-        <p>Four phones, four different optima — and no, it isn't &ldquo;all of them&rdquo; by default. The two big.LITTLE chips want 2; the tri-cluster Pixel wants 4, because it has exactly four fast cores — ask it for 6 and prefill <em>falls</em> from 143 to 102 tok/s. But the Snapdragon 710 really does want all 6: its big cores are weak enough that the little ones still add throughput. Even the direction of the rule flips per chip.</p>
+        <p>Four phones, four different optima, and no, it isn't &ldquo;all of them&rdquo; by default. The two big.LITTLE chips want 2; the tri-cluster Pixel wants 4, because it has exactly four fast cores, and asking it for 6 drops prefill from 143 to 102 tok/s. But the Snapdragon 710 really does want all 6: its big cores are weak enough that the little ones still add throughput. Even the direction of the rule flips from chip to chip.</p>
       </div>
     </div>
-    <p class="body-2 justify fade narrow-60">Every one contradicts what a reasonable developer would assume — and none of them generalizes across chips by default. That's the point: <strong>your phone's fastest configuration is an empirical question, so PocketTune answers it on your phone.</strong></p>
+    <p class="body-2 justify fade narrow-60">Every one of these contradicts what a reasonable developer would assume, and none of them holds across chips by default. Which is the whole reason the app works the way it does: <strong>your phone's fastest configuration is a question you can only answer by measuring, so PocketTune measures it on your phone.</strong></p>
   </div>
 </section>
 
@@ -615,7 +615,7 @@
         </div>
       </div>
     </div>
-    <p class="body-2 justify fade narrow-60">The whole stack exists to move one decision — <strong>which configuration to run</strong> — out of guesswork and into a measurement made on the phone in your hand.</p>
+    <p class="body-2 justify fade narrow-60">The whole stack exists to take one decision — <strong>which configuration to run</strong> — and settle it by measurement on the phone in your hand, rather than by guesswork.</p>
   </div>
 </section>
 
@@ -624,7 +624,7 @@
     <div class="center stack fade">
       <div class="kicker">The optimizations</div>
       <h2>Seven levers.<br>Two families.</h2>
-      <p class="lead narrow-60"><strong>Build-time</strong> levers are baked into the binaries and proved by the harness. <strong>Runtime</strong> levers are what the app tunes on your phone. Every one is measured — and two of the "obvious wins" turned out to be worth nothing.</p>
+      <p class="lead narrow-60"><strong>Build-time</strong> levers are baked into the binaries and proved by the harness. <strong>Runtime</strong> levers are what the app tunes on your phone. Every one is measured, and two of the "obvious wins" turned out to be worth nothing.</p>
     </div>
     <div class="opt-frame fade">
       <div class="opt-row">
@@ -654,7 +654,7 @@
       <div class="opt-row">
         <div class="opt-kind">Threading<span class="when">Runtime · app</span></div>
         <div class="opt-body"><h3>big.LITTLE-aware thread count</h3>
-        <p>More threads is <em>worse</em> when the extra workers are little cores — the whole team waits for the slowest. And the winning count is <em>different on every phone</em>: the two big.LITTLE chips want 2 threads, while the tri-cluster Pixel wants 4, because it has exactly four fast cores (2× X1 + 2× A78) and the 5th thread spills onto an A55. The app derives its candidates from this phone's actual core map instead of defaulting to "all of them".</p></div>
+        <p>More threads is actually worse when the extra workers are little cores, because the whole team waits for the slowest. And the winning count is different on every phone: the two big.LITTLE chips want 2 threads, while the tri-cluster Pixel wants 4, because it has exactly four fast cores (2× X1 + 2× A78) and the 5th thread spills onto an A55. The app builds its candidates from this phone's actual core map instead of defaulting to "all of them".</p></div>
         <div class="opt-result"><div class="v win">up to +41%</div><div class="d">choosing the right thread count instead of &ldquo;all 6&rdquo; · Pixel 7a prefill 101.8 → 143.5 t/s at 4 threads; Galaxy A34 decode 12.8 → 17.3 t/s at 2. The winning count is 2 on the MediaTek phones and 4 on the Pixel — no single default is right twice</div></div>
       </div>
       <div class="opt-row">
@@ -670,7 +670,7 @@
         <div class="opt-result"><div class="v">per config</div><div class="d">sampled live during each sweep point</div></div>
       </div>
     </div>
-    <p class="small justify fade stats-note">Measured numbers come from the four phones that have actually been through the harness — MediaTek, Google and Qualcomm silicon: one with <code>i8mm</code>, two with dotprod only, one with neither — and trace to raw JSON in <code>results/</code>. They disagree, and the disagreement is the finding: the same compiler flag buys 1.00×, 3.88×, 4.94× and 5.27×, and the <strong>biggest winner is a chip with no <code>i8mm</code></strong> while the pre-dotprod chip gains nothing at all. You cannot read the answer off a spec sheet. The <em>kind</em> of each optimization generalizes to any Arm phone; its <em>value</em> does not. That gap is the product.</p>
+    <p class="small justify fade stats-note">Measured numbers come from the four phones that have actually been through the harness — MediaTek, Google and Qualcomm silicon: one with <code>i8mm</code>, two with dotprod only, one with neither — and trace to raw JSON in <code>results/</code>. They disagree, and the disagreement is the finding: the same compiler flag buys 1.00×, 3.88×, 4.94× and 5.27×, and the <strong>biggest winner is a chip with no <code>i8mm</code></strong> while the pre-dotprod chip gains nothing at all. You can't read the answer off a spec sheet. The kind of each optimization carries over to any Arm phone; its value doesn't, and closing that gap is what the app is for.</p>
   </div>
 </section>
 
@@ -695,7 +695,7 @@
       <h2>Four tabs.<br>One tuned phone.</h2>
       <p class="lead">Everything on this page ships as one Android app. It reads the chip it was installed on, benchmarks the configurations that chip can actually run, applies the winner, and leaves you with a private assistant running exactly that setup.</p>
     </div>
-    <p class="body-2 justify fade narrow-60">The harness proves the gains on a bench; the app is where they land. <strong>The whole loop — detect, sweep, recommend, apply — happens on the phone, with no cloud and no spec-sheet guessing.</strong></p>
+    <p class="body-2 justify fade narrow-60">The harness proves the gains on a bench; the app is where they land. <strong>The whole loop of detect, sweep, recommend and apply happens on the phone, with no cloud and no spec-sheet guessing.</strong></p>
     <div class="carousel fade">
       <div class="shot-track" id="shot-track">
         <figure data-label="Knows your exact silicon">
